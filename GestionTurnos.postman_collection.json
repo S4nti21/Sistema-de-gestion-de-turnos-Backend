@@ -1,0 +1,89 @@
+{
+  "info": {
+    "name": "GestionTurnos - Backend Semana 1",
+    "description": "Colección de pruebas para setup, conexión a la base y autenticación (JWT + bcrypt).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "dni_prueba", "value": "40111222" }
+  ],
+  "item": [
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health"
+      }
+    },
+    {
+      "name": "Listar coberturas",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/coberturas"
+      }
+    },
+    {
+      "name": "Registro de paciente",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Test\",\n  \"apellido\": \"Postman\",\n  \"dni\": \"{{dni_prueba}}\",\n  \"email\": \"test.postman@example.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1999-01-01\",\n  \"telefono\": \"3424000000\",\n  \"id_cobertura\": 1\n}"
+        },
+        "url": "{{base_url}}/auth/registro"
+      }
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const respuesta = pm.response.json();",
+              "if (respuesta && respuesta.datos && respuesta.datos.token) {",
+              "    pm.collectionVariables.set('token', respuesta.datos.token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}"
+        },
+        "url": "{{base_url}}/auth/login"
+      }
+    },
+    {
+      "name": "Perfil (protegido con token)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base_url}}/auth/perfil"
+      }
+    },
+    {
+      "name": "Perfil sin token (debe dar 401)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/auth/perfil"
+      }
+    },
+    {
+      "name": "Admin-test con rol no permitido (debe dar 403)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base_url}}/auth/admin-test"
+      }
+    }
+  ]
+}
