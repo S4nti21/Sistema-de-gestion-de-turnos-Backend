@@ -469,6 +469,232 @@
           }
         }
       ]
+    },
+    {
+      "name": "Semana 3 - Turnos, historial y notificaciones",
+      "description": "Casos para validar alta, cancelacion, atencion, historial y notificaciones.",
+      "item": [
+        {
+          "name": "Login paciente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.token) {",
+                  "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": "{{base_url}}/auth/login"
+          }
+        },
+        {
+          "name": "Crear turno fuera de agenda (debe dar 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}},\n  \"id_medico\": 2,\n  \"fecha\": \"2026-09-01\",\n  \"hora\": \"14:00\",\n  \"nota\": \"Turno de prueba fuera de agenda\"\n}"
+            },
+            "url": "{{base_url}}/turnos"
+          }
+        },
+        {
+          "name": "Crear turno para cancelar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('turno_cancelar', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}},\n  \"id_medico\": 2,\n  \"fecha\": \"2026-09-01\",\n  \"hora\": \"08:00\",\n  \"nota\": \"Turno de prueba para cancelar\"\n}"
+            },
+            "url": "{{base_url}}/turnos"
+          }
+        },
+        {
+          "name": "Cancelar turno",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/turnos/{{turno_cancelar}}/cancelar"
+          }
+        },
+        {
+          "name": "Crear turno para atender",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('turno_atender', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}},\n  \"id_medico\": 2,\n  \"fecha\": \"2026-09-01\",\n  \"hora\": \"09:00\",\n  \"nota\": \"Turno de prueba para atender\"\n}"
+            },
+            "url": "{{base_url}}/turnos"
+          }
+        },
+        {
+          "name": "Login medico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.token) {",
+                  "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_medico}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": "{{base_url}}/auth/login"
+          }
+        },
+        {
+          "name": "Atender turno",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/turnos/{{turno_atender}}/atender"
+          }
+        },
+        {
+          "name": "Registrar historial clinico",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnostico\": \"Control de rutina\",\n  \"tratamiento\": \"Reposo y control\",\n  \"observaciones\": \"Sin hallazgos relevantes\"\n}"
+            },
+            "url": "{{base_url}}/historial-clinico/turnos/{{turno_atender}}"
+          }
+        },
+        {
+          "name": "Login paciente para ver notificaciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.token) {",
+                  "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": "{{base_url}}/auth/login"
+          }
+        },
+        {
+          "name": "Listar notificaciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.length > 0) {",
+                  "    pm.collectionVariables.set('notificacion_semana3', respuesta.datos[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/notificaciones"
+          }
+        },
+        {
+          "name": "Marcar notificacion como leida",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/notificaciones/{{notificacion_semana3}}/leida"
+          }
+        },
+        {
+          "name": "Mis turnos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/turnos/mis-turnos"
+          }
+        }
+      ]
     }
   ]
 }
