@@ -1,53 +1,238 @@
 {
   "info": {
-    "name": "GestionTurnos - Backend",
-    "description": "Colección de pruebas: setup, conexión a la base, autenticación (JWT + bcrypt) y CRUD de sedes, especialidades, coberturas y agenda médica.",
+    "name": "GestionTurnos - Backend (semanas 1 a 4)",
+    "description": "# Sistema de Gestion de Turnos Medicos — API\n\nBackend del TP Integrador de Programacion 2. Node.js + Express 4 + MySQL (`mysql2`), sin ORM.\n\nEsta coleccion documenta **todos los endpoints de las cuatro semanas**. Cada pedido incluye metodo, ruta, parametros, body esperado, respuestas posibles y el rol que puede acceder.\n\n---\n\n## Como levantar el proyecto\n\n```bash\nnpm install\n# crear la base y cargar los datos de prueba:\n#   phpMyAdmin -> Importar -> database/clinica.sql\n#   o:  mysql -u root -p < database/clinica.sql\ncp .env.example .env      # y completar las credenciales\nnpm run dev\n```\n\nLa API queda en `http://localhost:3000`. Para comprobarlo: **Semana 1 › Health check**.\n\n---\n\n## Formato de respuesta\n\n**Todos** los endpoints responden con la misma estructura:\n\n```json\n{ \"codigo\": 200, \"estado\": \"ok\", \"datos\": { } }\n```\n\n| campo | significado |\n|---|---|\n| `codigo` | codigo HTTP numerico, el mismo que trae la respuesta |\n| `estado` | `\"ok\"` si salio bien; si no, el mensaje de error en texto |\n| `datos` | el contenido de la respuesta, o `null` si no corresponde |\n\nEjemplo de error:\n\n```json\n{ \"codigo\": 403, \"estado\": \"No tenés permisos para acceder a este recurso\", \"datos\": null }\n```\n\n---\n\n## Autenticacion\n\nJWT enviado como `Authorization: Bearer <token>`. El payload del token trae `id`, `rol` e `id_sede`.\n\nPara obtener un token, usá cualquiera de los pedidos de **login**: un script de test guarda el token en la variable `{{token}}` y todos los pedidos siguientes lo toman de ahi. Cada login sobreescribe `{{token}}`, asi que **corré el login del rol que vas a probar antes de entrar a cada carpeta**.\n\n| codigo | cuando aparece |\n|---|---|\n| `401` | falta el token, o es invalido / esta vencido |\n| `403` | el token es valido pero el rol no tiene permiso |\n\n---\n\n## Roles\n\n| rol | que puede hacer |\n|---|---|\n| `paciente` | reservar y cancelar sus turnos, ver su historial y sus notificaciones |\n| `medico` | gestionar su agenda, atender sus turnos, cargar historial clinico |\n| `operador` | gestionar agenda y turnos de **su sede** |\n| `administrador` | ABM de usuarios, sedes, especialidades y coberturas; auditoria y reportes |\n\n---\n\n## Usuarios de prueba\n\nTodos con la password `Password123!`.\n\n| DNI | rol | nombre | sede |\n|---|---|---|---|\n| `10000001` | administrador | Marcos Gomez | — |\n| `10000002` | medico | Ana Lopez | Sede Centro |\n| `10000003` | operador | Juan Perez | Sede Centro |\n| `10000004` | medico | Diego Ramirez | Sede Norte |\n| `10000005` | medico | Valeria Sosa | Sede Sur |\n| `36000960` | paciente | Franco Friggeri | — |\n\n---\n\n## Orden sugerido\n\nLas carpetas estan pensadas para correrse **en orden**, porque algunas dependen de ids que guardan las anteriores (`{{id_sede_creada}}`, `{{id_agenda_creada}}`, `{{turno_atender}}`, …).\n\nSi algo devuelve 404 o 409 de forma inesperada, volve a correr `database/clinica.sql` para dejar la base en su estado inicial y empezá de nuevo.\n\nLos pedidos cuyo nombre dice **\"(debe dar 4xx)\"** son casos negativos: se espera que fallen, y estan ahi para documentar el manejo de errores.\n\n---\n\n## Novedades de la semana 4\n\n- **`GET /auditoria`** — consulta del log de acciones sensibles, con filtros por usuario, entidad, accion y rango de fechas.\n- **`GET /reportes/*`** — cuatro indicadores agregados, todos filtrables por rango de fechas.\n- **`/usuarios`** — ABM completo de usuarios, unica via por API para crear medicos, operadores y administradores.\n\nLa auditoria se escribe sola: el middleware `auditar(entidad)` envuelve las rutas de usuarios, coberturas, especialidades y sedes, y registra cada alta, baja y modificacion exitosa sin una sola linea de codigo en los controladores.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:3000" },
-    { "key": "token", "value": "" },
-    { "key": "dni_prueba", "value": "40111222" },
-    { "key": "dni_admin", "value": "10000001" },
-    { "key": "dni_medico", "value": "10000002" },
-    { "key": "dni_operador", "value": "10000003" },
-    { "key": "id_sede", "value": "1" },
-    { "key": "id_especialidad", "value": "1" },
-    { "key": "id_cobertura", "value": "1" },
-    { "key": "id_agenda", "value": "1" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_admin",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_medico",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_operador",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_paciente",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dni_prueba",
+      "value": "45000001",
+      "type": "string"
+    },
+    {
+      "key": "dni_admin",
+      "value": "10000001",
+      "type": "string"
+    },
+    {
+      "key": "dni_medico",
+      "value": "10000002",
+      "type": "string"
+    },
+    {
+      "key": "dni_operador",
+      "value": "10000003",
+      "type": "string"
+    },
+    {
+      "key": "id_sede",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "id_especialidad",
+      "value": "5",
+      "type": "string"
+    },
+    {
+      "key": "id_cobertura",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "fecha_agenda",
+      "value": "2026-10-15",
+      "type": "string"
+    },
+    {
+      "key": "desde",
+      "value": "2026-06-01",
+      "type": "string"
+    },
+    {
+      "key": "hasta",
+      "value": "2026-08-31",
+      "type": "string"
+    },
+    {
+      "key": "id_sede_creada",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_especialidad_creada",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_cobertura_creada",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_agenda_creada",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_agenda_descartable",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_usuario_creado",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "turno_cancelar",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "turno_atender",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificacion_semana3",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
-      "name": "Semana 1 - Auth",
+      "name": "Semana 1 - Auth y setup",
+      "description": "Verificacion del entorno, registro de pacientes y autenticacion con JWT + bcrypt.\n\nCorré estos pedidos en orden: **Registro de paciente** crea el usuario y **Login** guarda el token en `{{token}}`.",
       "item": [
         {
           "name": "Health check",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/health"
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "**`GET /health`**\n\nComprueba que la API responde y que la conexion a MySQL funciona.\n\n**Rol requerido:** publico\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos.db = \"conectada\"`\n- `500` — no se pudo conectar a la base de datos"
           }
         },
         {
-          "name": "Listar coberturas",
+          "name": "Listar coberturas (publico)",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/coberturas"
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/coberturas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coberturas"
+              ]
+            },
+            "description": "**`GET /coberturas`**\n\nListado usado por el formulario de registro para elegir la cobertura.\n\n**Rol requerido:** publico (no requiere token)\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, nombre }` ordenado por nombre\n- `500` — error al obtener las coberturas"
           }
         },
         {
           "name": "Registro de paciente",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/registro",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ]
+            },
+            "description": "**`POST /auth/registro`**\n\nAlta publica de pacientes. El rol queda fijo en `paciente`: para crear medicos, operadores o administradores se usa `POST /usuarios` (semana 4).\n\n**Rol requerido:** publico\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `apellido` | string | si |  |\n| `dni` | string | si | unico en la base |\n| `email` | string | si | unico en la base |\n| `password` | string | si | se guarda hasheada con bcrypt |\n| `fecha_nacimiento` | date | si | `YYYY-MM-DD` |\n| `telefono` | string | no | por defecto cadena vacia |\n| `id_cobertura` | int | si | debe existir en `cobertura` |\n\n**Respuestas**\n\n- `201` — usuario creado (sin la password)\n- `400` — faltan datos obligatorios, o la cobertura no existe\n- `409` — ya existe un usuario con ese DNI o email\n- `500` — error interno del servidor\n\n**Auditoria:** registra `ALTA` sobre la entidad `usuario`, a nombre del propio usuario creado.\n\n> Si ya corriste la coleccion antes, este pedido devuelve **409** porque el DNI ya existe. Volve a correr `database/clinica.sql` para arrancar limpio.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Test\",\n  \"apellido\": \"Postman\",\n  \"dni\": \"{{dni_prueba}}\",\n  \"email\": \"test.postman@example.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1999-01-01\",\n  \"telefono\": \"3424000000\",\n  \"id_cobertura\": 1\n}"
-            },
-            "url": "{{base_url}}/auth/registro"
+              "raw": "{\n  \"nombre\": \"Test\",\n  \"apellido\": \"Postman\",\n  \"dni\": \"{{dni_prueba}}\",\n  \"email\": \"test.postman@example.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1999-01-01\",\n  \"telefono\": \"3424000000\",\n  \"id_cobertura\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
-          "name": "Login",
+          "name": "Login (paciente de prueba)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "**`POST /auth/login`**\n\nObtiene un JWT para el rol **paciente**. El script de test lo guarda en `{{token_paciente}}` (y tambien en `{{token}}`), asi que los pedidos de ese rol lo toman solos.\n\n**Rol requerido:** publico\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `dni` | string | si | DNI del usuario |\n| `password` | string | si | Password en texto plano |\n\n**Respuestas**\n\n- `200` — `datos.token` con el JWT (payload: `id`, `rol`, `id_sede`)\n- `400` — falta `dni` o `password`\n- `401` — credenciales invalidas\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -57,52 +242,114 @@
                   "const respuesta = pm.response.json();",
                   "if (respuesta && respuesta.datos && respuesta.datos.token) {",
                   "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "    pm.collectionVariables.set('token_paciente', respuesta.datos.token);",
                   "}"
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}"
-            },
-            "url": "{{base_url}}/auth/login"
-          }
+          ]
         },
         {
           "name": "Perfil (protegido con token)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/auth/perfil"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/perfil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            },
+            "description": "**`GET /auth/perfil`**\n\nDevuelve los datos del usuario dueño del token.\n\n**Rol requerido:** cualquiera autenticado\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — datos del usuario, sin la password\n- `401` — sin token, o token invalido / vencido\n- `404` — el usuario del token ya no existe\n- `500` — error interno del servidor"
           }
         },
         {
           "name": "Perfil sin token (debe dar 401)",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/auth/perfil"
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/perfil",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            },
+            "description": "**`GET /auth/perfil`**\n\nCaso negativo: sin header `Authorization` el middleware `verificarToken` corta el pedido.\n\n**Rol requerido:** —\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `401` — no se proporciono un token de autenticacion"
           }
         },
         {
           "name": "Admin-test con rol no permitido (debe dar 403)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/auth/admin-test"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/admin-test",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "admin-test"
+              ]
+            },
+            "description": "**`GET /auth/admin-test`**\n\nEndpoint de prueba de `verificarRol`. Con el token de un paciente devuelve 403; con el de un administrador, 200.\n\n**Rol requerido:** administrador\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — acceso concedido (solo con token de administrador)\n- `401` — sin token\n- `403` — el rol del token no es `administrador`"
           }
         }
       ]
     },
     {
       "name": "Semana 2 - Login por rol",
-      "description": "Requiere usuarios administrador/medico/operador ya cargados en la base local (el registro público solo crea pacientes). Cada Login guarda el token en la variable de colección {{token}} para usar en las carpetas siguientes.",
+      "description": "Cada login sobreescribe `{{token}}`. Corré el que corresponda al rol que vas a probar antes de entrar a las carpetas siguientes.\n\nPassword de todos los usuarios semilla: `Password123!`",
       "item": [
         {
           "name": "Login admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "**`POST /auth/login`**\n\nObtiene un JWT para el rol **administrador**. El script de test lo guarda en `{{token_admin}}` (y tambien en `{{token}}`), asi que los pedidos de ese rol lo toman solos.\n\n**Rol requerido:** publico\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `dni` | string | si | DNI del usuario |\n| `password` | string | si | Password en texto plano |\n\n**Respuestas**\n\n- `200` — `datos.token` con el JWT (payload: `id`, `rol`, `id_sede`)\n- `400` — falta `dni` o `password`\n- `401` — credenciales invalidas\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_admin}}\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -112,23 +359,44 @@
                   "const respuesta = pm.response.json();",
                   "if (respuesta && respuesta.datos && respuesta.datos.token) {",
                   "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "    pm.collectionVariables.set('token_admin', respuesta.datos.token);",
                   "}"
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dni_admin}}\",\n  \"password\": \"Password123!\"\n}"
-            },
-            "url": "{{base_url}}/auth/login"
-          }
+          ]
         },
         {
           "name": "Login medico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "**`POST /auth/login`**\n\nObtiene un JWT para el rol **medico**. El script de test lo guarda en `{{token_medico}}` (y tambien en `{{token}}`), asi que los pedidos de ese rol lo toman solos.\n\n**Rol requerido:** publico\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `dni` | string | si | DNI del usuario |\n| `password` | string | si | Password en texto plano |\n\n**Respuestas**\n\n- `200` — `datos.token` con el JWT (payload: `id`, `rol`, `id_sede`)\n- `400` — falta `dni` o `password`\n- `401` — credenciales invalidas\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_medico}}\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -138,23 +406,44 @@
                   "const respuesta = pm.response.json();",
                   "if (respuesta && respuesta.datos && respuesta.datos.token) {",
                   "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "    pm.collectionVariables.set('token_medico', respuesta.datos.token);",
                   "}"
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dni_medico}}\",\n  \"password\": \"Password123!\"\n}"
-            },
-            "url": "{{base_url}}/auth/login"
-          }
+          ]
         },
         {
           "name": "Login operador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "**`POST /auth/login`**\n\nObtiene un JWT para el rol **operador**. El script de test lo guarda en `{{token_operador}}` (y tambien en `{{token}}`), asi que los pedidos de ese rol lo toman solos.\n\n**Rol requerido:** publico\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `dni` | string | si | DNI del usuario |\n| `password` | string | si | Password en texto plano |\n\n**Respuestas**\n\n- `200` — `datos.token` con el JWT (payload: `id`, `rol`, `id_sede`)\n- `400` — falta `dni` o `password`\n- `401` — credenciales invalidas\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_operador}}\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -164,47 +453,88 @@
                   "const respuesta = pm.response.json();",
                   "if (respuesta && respuesta.datos && respuesta.datos.token) {",
                   "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "    pm.collectionVariables.set('token_operador', respuesta.datos.token);",
                   "}"
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dni_operador}}\",\n  \"password\": \"Password123!\"\n}"
-            },
-            "url": "{{base_url}}/auth/login"
-          }
+          ]
         }
       ]
     },
     {
       "name": "Semana 2 - Sedes (admin)",
+      "description": "CRUD de sedes. Todas las rutas exigen token de **administrador** (`router.use(verificarToken, verificarRol('administrador'))`).\n\nCorré primero **Login admin**. Las altas y bajas quedan registradas en `log_auditoria`.",
       "item": [
         {
           "name": "Crear sede",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/sedes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sedes"
+              ]
+            },
+            "description": "**`POST /sedes`**\n\nCrea una sede y devuelve la fila creada. Guarda el id en `{{id_sede_creada}}`.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `direccion` | string | si |  |\n| `telefono` | string | si |  |\n\n**Respuestas**\n\n- `201` — sede creada\n- `400` — faltan datos obligatorios: nombre, direccion, telefono\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `ALTA` sobre `sede`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Sede Centro\",\n  \"direccion\": \"Av. Siempre Viva 123\",\n  \"telefono\": \"3424000001\"\n}"
-            },
-            "url": "{{base_url}}/sedes"
-          }
+              "raw": "{\n  \"nombre\": \"Sede Oeste\",\n  \"direccion\": \"Av. Siempre Viva 123\",\n  \"telefono\": \"3424000010\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('id_sede_creada', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Listar sedes",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/sedes"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sedes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sedes"
+              ]
+            },
+            "description": "**`GET /sedes`**\n\nDevuelve todas las sedes ordenadas por nombre.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, nombre, direccion, telefono }`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
           }
         },
         {
@@ -212,30 +542,81 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/sedes/{{id_sede_creada}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sedes",
+                "{{id_sede_creada}}"
+              ]
+            },
+            "description": "**`PUT /sedes/{{id_sede_creada}}`**\n\nActualiza la sede creada mas arriba. Los tres campos son obligatorios.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la sede a modificar |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `direccion` | string | si |  |\n| `telefono` | string | si |  |\n\n**Respuestas**\n\n- `200` — la sede actualizada\n- `400` — faltan datos obligatorios\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no es `administrador`\n- `404` — la sede indicada no existe\n- `500` — error interno del servidor\n\n**Auditoria:** registra `MODIFICACION` sobre `sede`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Sede Centro Actualizada\",\n  \"direccion\": \"Av. Siempre Viva 456\",\n  \"telefono\": \"3424000002\"\n}"
-            },
-            "url": "{{base_url}}/sedes/{{id_sede}}"
+              "raw": "{\n  \"nombre\": \"Sede Oeste Actualizada\",\n  \"direccion\": \"Av. Siempre Viva 456\",\n  \"telefono\": \"3424000011\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
           "name": "Eliminar sede con dependencias (debe dar 409)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/sedes/{{id_sede}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sedes/{{id_sede}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sedes",
+                "{{id_sede}}"
+              ]
+            },
+            "description": "**`DELETE /sedes/{{id_sede}}`**\n\nCaso negativo sobre la sede semilla 1, que tiene medicos, operadores y agenda asociados. El controlador chequea las dependencias antes de borrar.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la sede |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `409` — la sede tiene medicos, operadores o agenda asociados\n- `404` — la sede indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
           }
         },
         {
           "name": "Eliminar sede",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/sedes/{{id_sede}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sedes/{{id_sede_creada}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sedes",
+                "{{id_sede_creada}}"
+              ]
+            },
+            "description": "**`DELETE /sedes/{{id_sede_creada}}`**\n\nBorra la sede creada al inicio de la carpeta, que no tiene dependencias.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la sede |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` de la sede borrada\n- `409` — la sede tiene dependencias\n- `404` — la sede indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `BAJA` sobre `sede`."
           }
         },
         {
@@ -243,42 +624,111 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/sedes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sedes"
+              ]
+            },
+            "description": "**`POST /sedes`**\n\nCaso negativo: corré antes **Login medico** o **Login operador** para que `{{token}}` no sea de administrador.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `direccion` | string | si |  |\n| `telefono` | string | si |  |\n\n**Respuestas**\n\n- `403` — no tenes permisos para acceder a este recurso",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Sede X\",\n  \"direccion\": \"Calle Falsa 123\",\n  \"telefono\": \"3424000003\"\n}"
-            },
-            "url": "{{base_url}}/sedes"
+              "raw": "{\n  \"nombre\": \"Sede X\",\n  \"direccion\": \"Calle Falsa 123\",\n  \"telefono\": \"3424000012\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         }
       ]
     },
     {
       "name": "Semana 2 - Especialidades (admin)",
+      "description": "CRUD de especialidades medicas. Solo rol **administrador**. La tabla `especialidad` usa la columna `descripcion` (no `nombre`).",
       "item": [
         {
           "name": "Crear especialidad",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/especialidades",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "especialidades"
+              ]
+            },
+            "description": "**`POST /especialidades`**\n\nCrea una especialidad y guarda su id en `{{id_especialidad_creada}}`.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `descripcion` | string | si | nombre de la especialidad |\n\n**Respuestas**\n\n- `201` — especialidad creada\n- `400` — falta el dato obligatorio: descripcion\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `ALTA` sobre `especialidad`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"descripcion\": \"Cardiología\"\n}"
-            },
-            "url": "{{base_url}}/especialidades"
-          }
+              "raw": "{\n  \"descripcion\": \"Oftalmologia\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('id_especialidad_creada', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Listar especialidades",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/especialidades"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/especialidades",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "especialidades"
+              ]
+            },
+            "description": "**`GET /especialidades`**\n\nDevuelve todas las especialidades ordenadas por descripcion.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, descripcion }`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
           }
         },
         {
@@ -286,81 +736,218 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/especialidades/{{id_especialidad_creada}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "especialidades",
+                "{{id_especialidad_creada}}"
+              ]
+            },
+            "description": "**`PUT /especialidades/{{id_especialidad_creada}}`**\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la especialidad |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `descripcion` | string | si |  |\n\n**Respuestas**\n\n- `200` — la especialidad actualizada\n- `400` — faltan datos obligatorios\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no es `administrador`\n- `404` — la especialidad indicada no existe\n- `500` — error interno del servidor\n\n**Auditoria:** registra `MODIFICACION` sobre `especialidad`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"descripcion\": \"Cardiología Infantil\"\n}"
-            },
-            "url": "{{base_url}}/especialidades/{{id_especialidad}}"
+              "raw": "{\n  \"descripcion\": \"Oftalmologia Infantil\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
-          "name": "Eliminar especialidad con médico asociado (debe dar 409)",
+          "name": "Eliminar especialidad con dependencias (debe dar 409)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/especialidades/{{id_especialidad}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/especialidades/{{id_especialidad}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "especialidades",
+                "{{id_especialidad}}"
+              ]
+            },
+            "description": "**`DELETE /especialidades/{{id_especialidad}}`**\n\nCaso negativo sobre una especialidad semilla. Se chequean tres dependencias antes de borrar: medicos asignados, agenda y turnos.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la especialidad |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `409` — tiene medicos, agenda o turnos asociados\n- `404` — la especialidad indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
           }
         },
         {
           "name": "Eliminar especialidad",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/especialidades/{{id_especialidad}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/especialidades/{{id_especialidad_creada}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "especialidades",
+                "{{id_especialidad_creada}}"
+              ]
+            },
+            "description": "**`DELETE /especialidades/{{id_especialidad_creada}}`**\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la especialidad |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` de la especialidad borrada\n- `409` — tiene medicos, agenda o turnos asociados\n- `404` — la especialidad indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `BAJA` sobre `especialidad`."
           }
         }
       ]
     },
     {
       "name": "Semana 2 - Coberturas (admin)",
+      "description": "CRUD de coberturas / obras sociales.\n\nEl `GET /coberturas` es **publico** (lo consume el registro de pacientes); las altas, bajas y modificaciones exigen rol **administrador**.",
       "item": [
         {
           "name": "Crear cobertura",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/coberturas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coberturas"
+              ]
+            },
+            "description": "**`POST /coberturas`**\n\nCrea una cobertura y guarda su id en `{{id_cobertura_creada}}`.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n\n**Respuestas**\n\n- `201` — cobertura creada\n- `400` — falta el dato obligatorio: nombre\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `ALTA` sobre `cobertura`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"OSDE\"\n}"
-            },
-            "url": "{{base_url}}/coberturas"
-          }
+              "raw": "{\n  \"nombre\": \"Union Personal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('id_cobertura_creada', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Actualizar cobertura",
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/coberturas/{{id_cobertura_creada}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coberturas",
+                "{{id_cobertura_creada}}"
+              ]
+            },
+            "description": "**`PUT /coberturas/{{id_cobertura_creada}}`**\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la cobertura |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n\n**Respuestas**\n\n- `200` — la cobertura actualizada\n- `400` — faltan datos obligatorios\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no es `administrador`\n- `404` — la cobertura indicada no existe\n- `500` — error interno del servidor\n\n**Auditoria:** registra `MODIFICACION` sobre `cobertura`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"OSDE 210\"\n}"
-            },
-            "url": "{{base_url}}/coberturas/{{id_cobertura}}"
+              "raw": "{\n  \"nombre\": \"Union Personal Plus\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
-          "name": "Eliminar cobertura con usuario asociado (debe dar 409)",
+          "name": "Eliminar cobertura con dependencias (debe dar 409)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/coberturas/{{id_cobertura}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/coberturas/{{id_cobertura}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coberturas",
+                "{{id_cobertura}}"
+              ]
+            },
+            "description": "**`DELETE /coberturas/{{id_cobertura}}`**\n\nCaso negativo sobre una cobertura semilla, que tiene pacientes y turnos asociados.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la cobertura |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `409` — tiene usuarios o turnos asociados\n- `404` — la cobertura indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
           }
         },
         {
           "name": "Eliminar cobertura",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/coberturas/{{id_cobertura}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/coberturas/{{id_cobertura_creada}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coberturas",
+                "{{id_cobertura_creada}}"
+              ]
+            },
+            "description": "**`DELETE /coberturas/{{id_cobertura_creada}}`**\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la cobertura |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` de la cobertura borrada\n- `409` — tiene usuarios o turnos asociados\n- `404` — la cobertura indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `BAJA` sobre `cobertura`."
           }
         },
         {
@@ -368,42 +955,128 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/coberturas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coberturas"
+              ]
+            },
+            "description": "**`POST /coberturas`**\n\nCaso negativo: corré antes **Login medico** o **Login paciente**.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n\n**Respuestas**\n\n- `403` — no tenes permisos para acceder a este recurso",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Swiss Medical\"\n}"
-            },
-            "url": "{{base_url}}/coberturas"
+              "raw": "{\n  \"nombre\": \"Swiss Medical\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         }
       ]
     },
     {
       "name": "Semana 2 - Agenda (medico/operador)",
+      "description": "Agenda de disponibilidad medica. Accesible a los roles **medico**, **operador** y **administrador**.\n\nUn medico solo puede tocar su propia agenda; un operador, la de su sede. Corré antes **Login medico** o **Login operador**.\n\nLa agenda que se crea aca (`{{fecha_agenda}}`, 08:00-12:00) es la que despues usan los turnos de la semana 3.",
       "item": [
         {
-          "name": "Crear agenda (como medico o operador)",
+          "name": "Crear agenda",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/agenda",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda"
+              ]
+            },
+            "description": "**`POST /agenda`**\n\nCrea una franja de disponibilidad. Guarda el id en `{{id_agenda_creada}}`. `id_medico` 2 es Ana Lopez (sede 1, Traumatologia).\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si | formato `HH:MM` |\n| `hora_salida` | string | si | formato `HH:MM`, posterior a la entrada |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `id_medico` | int | si | usuario con rol `medico` |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `201` — agenda creada\n- `400` — faltan datos obligatorios o las horas son invalidas\n- `403` — un medico intenta crear agenda para otro medico, o para otra sede\n- `404` — el medico, la especialidad o la sede no existen\n- `409` — se superpone con otra franja del mismo medico\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"hora_entrada\": \"08:00\",\n  \"hora_salida\": \"12:00\",\n  \"fecha\": \"2026-09-01\",\n  \"id_medico\": 2,\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}}\n}"
-            },
-            "url": "{{base_url}}/agenda"
-          }
+              "raw": "{\n  \"hora_entrada\": \"08:00\",\n  \"hora_salida\": \"12:00\",\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"id_medico\": 2,\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('id_agenda_creada', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Listar agenda (filtros opcionales)",
+          "name": "Listar agenda (con filtros)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/agenda?id_medico=2&id_sede={{id_sede}}&fecha=2026-09-01"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda?id_medico=2&id_sede={{id_sede}}&fecha={{fecha_agenda}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda"
+              ],
+              "query": [
+                {
+                  "key": "id_medico",
+                  "value": "2",
+                  "description": "Filtra por medico (opcional)"
+                },
+                {
+                  "key": "id_sede",
+                  "value": "{{id_sede}}",
+                  "description": "Filtra por sede (opcional)"
+                },
+                {
+                  "key": "fecha",
+                  "value": "{{fecha_agenda}}",
+                  "description": "Filtra por fecha `YYYY-MM-DD` (opcional)"
+                }
+              ]
+            },
+            "description": "**`GET /agenda`**\n\nLista las franjas de agenda. Los tres filtros son opcionales y se combinan entre si.\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de franjas de agenda\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso\n- `500` — error interno del servidor"
           }
         },
         {
@@ -411,38 +1084,130 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/agenda/{{id_agenda_creada}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda",
+                "{{id_agenda_creada}}"
+              ]
+            },
+            "description": "**`PUT /agenda/{{id_agenda_creada}}`**\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si | `HH:MM` |\n| `hora_salida` | string | si | `HH:MM` |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `200` — agenda actualizada\n- `400` — faltan datos obligatorios\n- `403` — es la agenda de otro medico o de otra sede\n- `404` — la agenda indicada no existe\n- `409` — se superpone con otra franja\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"hora_entrada\": \"09:00\",\n  \"hora_salida\": \"13:00\",\n  \"fecha\": \"2026-09-01\",\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}}\n}"
-            },
-            "url": "{{base_url}}/agenda/{{id_agenda}}"
+              "raw": "{\n  \"hora_entrada\": \"08:00\",\n  \"hora_salida\": \"13:00\",\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
           "name": "Eliminar agenda con turnos asociados (debe dar 409)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/agenda/{{id_agenda}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda",
+                "1"
+              ]
+            },
+            "description": "**`DELETE /agenda/1`**\n\nCaso negativo sobre la agenda semilla 1 (Ana Lopez, 10/06/2026), que tiene turnos asociados. El controlador chequea `turno.id_agenda` antes de borrar.\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `409` — no se puede eliminar la agenda: tiene turnos asociados\n- `403` — es la agenda de otro medico\n- `404` — la agenda indicada no existe"
           }
+        },
+        {
+          "name": "Crear agenda descartable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda"
+              ]
+            },
+            "description": "**`POST /agenda`**\n\nSegunda franja, en otra fecha, creada solo para poder probar el borrado sin tocar la agenda que usan los turnos de la semana 3.\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si | `HH:MM` |\n| `hora_salida` | string | si | `HH:MM` |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `id_medico` | int | si |  |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `201` — agenda creada\n- `400` — faltan datos obligatorios\n- `409` — se superpone con otra franja del mismo medico\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hora_entrada\": \"14:00\",\n  \"hora_salida\": \"18:00\",\n  \"fecha\": \"2026-10-16\",\n  \"id_medico\": 2,\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('id_agenda_descartable', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Eliminar agenda",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/agenda/{{id_agenda}}"
-          }
-        },
-        {
-          "name": "Medico intenta ver agenda ajena (debe dar 200 pero vacío o solo la propia)",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/agenda?id_medico=999"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda/{{id_agenda_descartable}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda",
+                "{{id_agenda_descartable}}"
+              ]
+            },
+            "description": "**`DELETE /agenda/{{id_agenda_descartable}}`**\n\nBorra la franja descartable, que no tiene turnos asociados.\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` de la agenda borrada\n- `403` — es la agenda de otro medico o de otra sede\n- `404` — la agenda indicada no existe\n- `409` — la agenda tiene turnos asociados\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n> La franja creada al principio de la carpeta (`{{id_agenda_creada}}`) se deja viva a proposito: los turnos de la semana 3 la necesitan."
           }
         },
         {
@@ -450,32 +1215,96 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/agenda/11",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda",
+                "11"
+              ]
+            },
+            "description": "**`PUT /agenda/11`**\n\nCaso negativo de la regla de propiedad. La agenda semilla 11 es de Diego Ramirez (sede Norte), y el token es de Ana Lopez.\n\nEl id tiene que ser el de una agenda **existente**: si no existe, el controlador devuelve 404 antes de llegar al chequeo de propiedad.\n\n**Rol requerido:** `medico`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de una agenda de otro medico |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si |  |\n| `hora_salida` | string | si |  |\n| `fecha` | date | si |  |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `403` — no podes modificar la agenda de otro medico\n- `404` — la agenda indicada no existe",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"hora_entrada\": \"09:00\",\n  \"hora_salida\": \"13:00\",\n  \"fecha\": \"2026-09-01\",\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}}\n}"
-            },
-            "url": "{{base_url}}/agenda/999"
+              "raw": "{\n  \"hora_entrada\": \"09:00\",\n  \"hora_salida\": \"13:00\",\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
           "name": "Paciente sin acceso a agenda (debe dar 403)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/agenda"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda"
+              ]
+            },
+            "description": "**`GET /agenda`**\n\nCaso negativo: corré antes **Login (paciente de prueba)**.\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `403` — no tenes permisos para acceder a este recurso"
           }
         }
       ]
     },
     {
       "name": "Semana 3 - Turnos, historial y notificaciones",
-      "description": "Casos para validar alta, cancelacion, atencion, historial y notificaciones.",
+      "description": "Reserva, cancelacion y atencion de turnos, historial clinico y notificaciones.\n\n**Orden obligatorio:** esta carpeta depende de la agenda creada en *Semana 2 - Agenda*. Los logins intermedios cambian `{{token}}` a proposito, porque cada accion la hace un rol distinto.\n\nEstados de un turno: `confirmado` (al crearse) -> `cancelado` o `atendido`.",
       "item": [
         {
           "name": "Login paciente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "**`POST /auth/login`**\n\nObtiene un JWT para el rol **paciente**. El script de test lo guarda en `{{token_paciente}}` (y tambien en `{{token}}`), asi que los pedidos de ese rol lo toman solos.\n\n**Rol requerido:** publico\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `dni` | string | si | DNI del usuario |\n| `password` | string | si | Password en texto plano |\n\n**Respuestas**\n\n- `200` — `datos.token` con el JWT (payload: `id`, `rol`, `id_sede`)\n- `400` — falta `dni` o `password`\n- `401` — credenciales invalidas\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -485,38 +1314,82 @@
                   "const respuesta = pm.response.json();",
                   "if (respuesta && respuesta.datos && respuesta.datos.token) {",
                   "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "    pm.collectionVariables.set('token_paciente', respuesta.datos.token);",
                   "}"
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}"
-            },
-            "url": "{{base_url}}/auth/login"
-          }
+          ]
         },
         {
           "name": "Crear turno fuera de agenda (debe dar 409)",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/turnos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos"
+              ]
+            },
+            "description": "**`POST /turnos`**\n\nCaso negativo: la hora 14:00 cae fuera de la franja 08:00-12:00 creada en la semana 2, asi que no hay agenda que la cubra.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n| `id_medico` | int | si |  |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `hora` | string | si | `HH:MM` |\n| `nota` | string | si | motivo de la consulta, hasta 40 caracteres |\n| `id_paciente` | int | no | solo lo manda el operador; el paciente lo toma de su token |\n\n**Respuestas**\n\n- `409` — el horario solicitado no esta disponible en la agenda del medico",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}},\n  \"id_medico\": 2,\n  \"fecha\": \"2026-09-01\",\n  \"hora\": \"14:00\",\n  \"nota\": \"Turno de prueba fuera de agenda\"\n}"
-            },
-            "url": "{{base_url}}/turnos"
+              "raw": "{\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\",\n  \"id_medico\": 2,\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"hora\": \"14:00\",\n  \"nota\": \"Turno fuera de agenda\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
           "name": "Crear turno para cancelar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos"
+              ]
+            },
+            "description": "**`POST /turnos`**\n\nAlta de turno dentro de la franja de agenda. Guarda el id en `{{turno_cancelar}}` y genera una notificacion `turno_confirmado` para el paciente.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n| `id_medico` | int | si |  |\n| `fecha` | date | si |  |\n| `hora` | string | si |  |\n| `nota` | string | si |  |\n| `id_paciente` | int | no | solo el operador |\n\n**Respuestas**\n\n- `201` — turno creado en estado `confirmado`, con los nombres de paciente, medico, especialidad y sede\n- `400` — faltan datos obligatorios\n- `403` — el operador intenta crear un turno para otra sede\n- `404` — el paciente, medico, especialidad o sede no existen\n- `409` — no hay agenda para ese horario, o el horario ya esta ocupado\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\",\n  \"id_medico\": 2,\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"hora\": \"08:00\",\n  \"nota\": \"Turno de prueba para cancelar\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -530,30 +1403,66 @@
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}},\n  \"id_medico\": 2,\n  \"fecha\": \"2026-09-01\",\n  \"hora\": \"08:00\",\n  \"nota\": \"Turno de prueba para cancelar\"\n}"
-            },
-            "url": "{{base_url}}/turnos"
-          }
+          ]
         },
         {
           "name": "Cancelar turno",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/turnos/{{turno_cancelar}}/cancelar"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos/{{turno_cancelar}}/cancelar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos",
+                "{{turno_cancelar}}",
+                "cancelar"
+              ]
+            },
+            "description": "**`PATCH /turnos/{{turno_cancelar}}/cancelar`**\n\nPasa el turno a `cancelado` y notifica al paciente y al medico. Impacta de inmediato en el reporte de tasa de cancelacion.\n\n**Rol requerido:** `paciente` (propio), `operador` o `medico` (de su sede)\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del turno |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — turno actualizado, con `estado = \"cancelado\"`\n- `403` — el turno es de otro paciente o de otra sede\n- `404` — el turno indicado no existe\n- `409` — solo se pueden cancelar turnos `confirmado`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
           }
         },
         {
           "name": "Crear turno para atender",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos"
+              ]
+            },
+            "description": "**`POST /turnos`**\n\nSegundo turno, en otro horario de la misma franja. Guarda el id en `{{turno_atender}}`.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n| `id_medico` | int | si |  |\n| `fecha` | date | si |  |\n| `hora` | string | si |  |\n| `nota` | string | si |  |\n\n**Respuestas**\n\n- `201` — turno creado en estado `confirmado`\n- `409` — el horario ya tiene un turno confirmado\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\",\n  \"id_medico\": 2,\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"hora\": \"09:00\",\n  \"nota\": \"Turno de prueba para atender\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -567,22 +1476,39 @@
                 ]
               }
             }
-          ],
+          ]
+        },
+        {
+          "name": "Login medico (para atender)",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "**`POST /auth/login`**\n\nObtiene un JWT para el rol **medico**. El script de test lo guarda en `{{token_medico}}` (y tambien en `{{token}}`), asi que los pedidos de ese rol lo toman solos.\n\n**Rol requerido:** publico\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `dni` | string | si | DNI del usuario |\n| `password` | string | si | Password en texto plano |\n\n**Respuestas**\n\n- `200` — `datos.token` con el JWT (payload: `id`, `rol`, `id_sede`)\n- `400` — falta `dni` o `password`\n- `401` — credenciales invalidas\n- `500` — error interno del servidor",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id_especialidad\": {{id_especialidad}},\n  \"id_sede\": {{id_sede}},\n  \"id_medico\": 2,\n  \"fecha\": \"2026-09-01\",\n  \"hora\": \"09:00\",\n  \"nota\": \"Turno de prueba para atender\"\n}"
-            },
-            "url": "{{base_url}}/turnos"
-          }
-        },
-        {
-          "name": "Login medico",
+              "raw": "{\n  \"dni\": \"{{dni_medico}}\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -592,27 +1518,65 @@
                   "const respuesta = pm.response.json();",
                   "if (respuesta && respuesta.datos && respuesta.datos.token) {",
                   "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "    pm.collectionVariables.set('token_medico', respuesta.datos.token);",
                   "}"
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dni_medico}}\",\n  \"password\": \"Password123!\"\n}"
-            },
-            "url": "{{base_url}}/auth/login"
-          }
+          ]
         },
         {
           "name": "Atender turno",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/turnos/{{turno_atender}}/atender"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos/{{turno_atender}}/atender",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos",
+                "{{turno_atender}}",
+                "atender"
+              ]
+            },
+            "description": "**`PATCH /turnos/{{turno_atender}}/atender`**\n\nPasa el turno a `atendido`. Es lo que cuenta el ranking de medicos de la semana 4.\n\n**Rol requerido:** `medico` (solo sus propios turnos)\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del turno |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — turno actualizado, con `estado = \"atendido\"`\n- `403` — el turno es de otro medico o de otra sede\n- `404` — el turno indicado no existe\n- `409` — solo se pueden atender turnos `confirmado`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Turnos del medico por fecha",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos/medico?fecha={{fecha_agenda}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos",
+                "medico"
+              ],
+              "query": [
+                {
+                  "key": "fecha",
+                  "value": "{{fecha_agenda}}",
+                  "description": "Fecha `YYYY-MM-DD` (OBLIGATORIO)"
+                }
+              ]
+            },
+            "description": "**`GET /turnos/medico`**\n\nTurnos del medico logueado para una fecha. Excluye los cancelados.\n\n**Rol requerido:** `medico`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de turnos ordenados por hora\n- `400` — falta el dato obligatorio: fecha\n- `403` — el rol del token no es `medico`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
           }
         },
         {
@@ -620,18 +1584,69 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/historial-clinico/turnos/{{turno_atender}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "historial-clinico",
+                "turnos",
+                "{{turno_atender}}"
+              ]
+            },
+            "description": "**`POST /historial-clinico/turnos/{{turno_atender}}`**\n\nCarga el diagnostico de un turno ya atendido.\n\n**Rol requerido:** `medico`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id_turno` | path | id del turno atendido |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `diagnostico` | string | si |  |\n| `tratamiento` | string | no |  |\n| `observaciones` | string | no |  |\n\n**Respuestas**\n\n- `201` — registro de historial creado\n- `400` — falta el diagnostico\n- `403` — el turno es de otro medico\n- `404` — el turno indicado no existe\n- `409` — el turno no esta atendido, o ya tiene historial\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"diagnostico\": \"Control de rutina\",\n  \"tratamiento\": \"Reposo y control\",\n  \"observaciones\": \"Sin hallazgos relevantes\"\n}"
-            },
-            "url": "{{base_url}}/historial-clinico/turnos/{{turno_atender}}"
+              "raw": "{\n  \"diagnostico\": \"Control de rutina\",\n  \"tratamiento\": \"Reposo y control\",\n  \"observaciones\": \"Sin hallazgos relevantes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
-          "name": "Login paciente para ver notificaciones",
+          "name": "Login paciente (para notificaciones)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "**`POST /auth/login`**\n\nObtiene un JWT para el rol **paciente**. El script de test lo guarda en `{{token_paciente}}` (y tambien en `{{token}}`), asi que los pedidos de ese rol lo toman solos.\n\n**Rol requerido:** publico\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `dni` | string | si | DNI del usuario |\n| `password` | string | si | Password en texto plano |\n\n**Respuestas**\n\n- `200` — `datos.token` con el JWT (payload: `id`, `rol`, `id_sede`)\n- `400` — falta `dni` o `password`\n- `401` — credenciales invalidas\n- `500` — error interno del servidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
           "event": [
             {
               "listen": "test",
@@ -641,23 +1656,34 @@
                   "const respuesta = pm.response.json();",
                   "if (respuesta && respuesta.datos && respuesta.datos.token) {",
                   "    pm.collectionVariables.set('token', respuesta.datos.token);",
+                  "    pm.collectionVariables.set('token_paciente', respuesta.datos.token);",
                   "}"
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dni_prueba}}\",\n  \"password\": \"Password123!\"\n}"
-            },
-            "url": "{{base_url}}/auth/login"
-          }
+          ]
         },
         {
           "name": "Listar notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notificaciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notificaciones"
+              ]
+            },
+            "description": "**`GET /notificaciones`**\n\nNotificaciones del usuario del token. Guarda el id de la primera en `{{notificacion_semana3}}`.\n\n**Rol requerido:** cualquiera autenticado (devuelve solo las propias)\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, tipo, mensaje, leida, fecha }`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
+          },
           "event": [
             {
               "listen": "test",
@@ -671,27 +1697,1306 @@
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/notificaciones"
-          }
+          ]
         },
         {
           "name": "Marcar notificacion como leida",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/notificaciones/{{notificacion_semana3}}/leida"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notificaciones/{{notificacion_semana3}}/leida",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notificaciones",
+                "{{notificacion_semana3}}",
+                "leida"
+              ]
+            },
+            "description": "**`PATCH /notificaciones/{{notificacion_semana3}}/leida`**\n\n**Rol requerido:** cualquiera autenticado (solo las propias)\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la notificacion |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — notificacion actualizada con `leida = 1`\n- `403` — la notificacion es de otro usuario\n- `404` — la notificacion indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
           }
         },
         {
           "name": "Mis turnos",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/turnos/mis-turnos"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos/mis-turnos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos",
+                "mis-turnos"
+              ]
+            },
+            "description": "**`GET /turnos/mis-turnos`**\n\nTodos los turnos del paciente logueado, ordenados por fecha y hora.\n\n**Rol requerido:** `paciente`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de turnos con nombres de medico, especialidad y sede\n- `403` — el rol del token no es `paciente`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Historial clinico de un paciente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/historial-clinico/paciente/7",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "historial-clinico",
+                "paciente",
+                "7"
+              ]
+            },
+            "description": "**`GET /historial-clinico/paciente/7`**\n\nHistorial completo de un paciente. El id 7 es Franco Friggeri, que tiene historial en los datos semilla.\n\n**Rol requerido:** `paciente` (solo el propio) o `medico`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id_paciente` | path | id del paciente |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de registros de historial\n- `403` — un paciente intenta ver el historial de otro\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Semana 4 - Usuarios (admin)",
+      "description": "ABM de usuarios para el administrador. **Rol requerido: `administrador`.** Cualquier otro rol recibe **403** por el middleware `verificarRol('administrador')` aplicado a nivel de router.\n\nEs la unica via por API para crear **medicos, operadores y administradores**: `POST /auth/registro` solo da de alta pacientes.\n\nCada alta, baja y modificacion de esta carpeta queda registrada automaticamente en `log_auditoria`.\n\nCorré antes **Login admin**.",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "rol",
+                  "value": "medico",
+                  "description": "`paciente` | `medico` | `operador` | `administrador` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "id_sede",
+                  "value": "{{id_sede}}",
+                  "description": "Filtra por sede (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "dni",
+                  "value": "{{dni_medico}}",
+                  "description": "Busqueda exacta por DNI (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /usuarios`**\n\nLista usuarios con filtros opcionales combinables. Nunca devuelve la columna `password`.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de usuarios ordenado por apellido y nombre\n- `400` — el `rol` enviado no es uno de los cuatro validos\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Obtener usuario por id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "2"
+              ]
+            },
+            "description": "**`GET /usuarios/2`**\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del usuario |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — usuario, sin la password\n- `404` — el usuario indicado no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Crear medico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "**`POST /usuarios`**\n\nAlta de usuario con rol elegible. Segun el rol cambia que vinculo es obligatorio:\n\n- `medico` y `operador` -> **`id_sede` obligatorio** (`id_cobertura` se guarda en NULL)\n- `paciente` -> **`id_cobertura` obligatorio** (`id_sede` se guarda en NULL)\n- `administrador` -> ninguno de los dos\n\nGuarda el id en `{{id_usuario_creado}}`.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `apellido` | string | si |  |\n| `dni` | string | si | unico |\n| `email` | string | si | unico |\n| `password` | string | si | se hashea con bcrypt |\n| `fecha_nacimiento` | date | si | `YYYY-MM-DD` |\n| `rol` | string | si | `paciente` | `medico` | `operador` | `administrador` |\n| `telefono` | string | no |  |\n| `id_sede` | int | no | obligatorio si el rol es `medico` u `operador` |\n| `id_cobertura` | int | no | obligatorio si el rol es `paciente` |\n\n**Respuestas**\n\n- `201` — usuario creado, sin la password\n- `400` — faltan datos, el rol no es valido, o falta el vinculo que el rol exige\n- `409` — ya existe un usuario con ese DNI o email\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `ALTA` sobre `usuario` (el `detalle` guarda el body **sin** la password).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Nuevo\",\n  \"apellido\": \"Medico\",\n  \"dni\": \"50000001\",\n  \"email\": \"nuevo.medico@clinica.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1990-01-01\",\n  \"telefono\": \"3424000123\",\n  \"rol\": \"medico\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('id_usuario_creado', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear operador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "**`POST /usuarios`**\n\nMismo endpoint, con `rol: \"operador\"`. Tambien exige `id_sede`.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `apellido` | string | si |  |\n| `dni` | string | si |  |\n| `email` | string | si |  |\n| `password` | string | si |  |\n| `fecha_nacimiento` | date | si |  |\n| `rol` | string | si | `operador` |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `201` — usuario creado\n- `400` — faltan datos, o falta `id_sede`\n- `409` — DNI o email duplicados\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `ALTA` sobre `usuario`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Nueva\",\n  \"apellido\": \"Operadora\",\n  \"dni\": \"50000002\",\n  \"email\": \"nueva.operadora@clinica.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1992-03-15\",\n  \"telefono\": \"3424000124\",\n  \"rol\": \"operador\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear medico sin id_sede (debe dar 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "**`POST /usuarios`**\n\nCaso negativo: el rol `medico` exige sede.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `rol` | string | si | `medico` sin `id_sede` |\n\n**Respuestas**\n\n- `400` — falta el dato obligatorio para el rol medico: id_sede",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sin\",\n  \"apellido\": \"Sede\",\n  \"dni\": \"50000003\",\n  \"email\": \"sin.sede@clinica.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1990-01-01\",\n  \"rol\": \"medico\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear usuario con rol invalido (debe dar 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "**`POST /usuarios`**\n\nCaso negativo: el rol se valida contra la lista cerrada de roles.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `rol` | string | si | valor fuera de la lista permitida |\n\n**Respuestas**\n\n- `400` — el rol debe ser uno de: paciente, medico, operador, administrador",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Rol\",\n  \"apellido\": \"Invalido\",\n  \"dni\": \"50000004\",\n  \"email\": \"rol.invalido@clinica.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1990-01-01\",\n  \"rol\": \"jefe\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Crear usuario con DNI duplicado (debe dar 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "**`POST /usuarios`**\n\nCaso negativo: el DNI ya lo tiene el medico creado mas arriba.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `dni` | string | si | DNI ya existente |\n\n**Respuestas**\n\n- `409` — ya existe un usuario registrado con ese DNI o email",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Dup\",\n  \"apellido\": \"Licado\",\n  \"dni\": \"50000001\",\n  \"email\": \"duplicado@clinica.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1990-01-01\",\n  \"rol\": \"paciente\",\n  \"id_cobertura\": \"{{id_cobertura}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Actualizar usuario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/{{id_usuario_creado}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{id_usuario_creado}}"
+              ]
+            },
+            "description": "**`PUT /usuarios/{{id_usuario_creado}}`**\n\nModifica el usuario. **`password` es opcional**: si no se envia, se conserva la que ya tenia (`COALESCE(?, password)`). El resto de los campos son obligatorios.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del usuario |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `apellido` | string | si |  |\n| `dni` | string | si |  |\n| `email` | string | si |  |\n| `fecha_nacimiento` | date | si |  |\n| `rol` | string | si |  |\n| `password` | string | no | solo si se quiere cambiar |\n| `telefono` | string | no |  |\n| `id_sede` | int | no | obligatorio si el rol es `medico` u `operador` |\n| `id_cobertura` | int | no | obligatorio si el rol es `paciente` |\n\n**Respuestas**\n\n- `200` — usuario actualizado\n- `400` — faltan datos, rol invalido, o falta el vinculo del rol\n- `404` — el usuario indicado no existe\n- `409` — ya existe otro usuario con ese DNI o email\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `MODIFICACION` sobre `usuario`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Nuevo\",\n  \"apellido\": \"Medico Editado\",\n  \"dni\": \"50000001\",\n  \"email\": \"nuevo.medico@clinica.com\",\n  \"fecha_nacimiento\": \"1990-01-01\",\n  \"telefono\": \"3424000123\",\n  \"rol\": \"medico\",\n  \"id_sede\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Eliminar el propio usuario (debe dar 409)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "1"
+              ]
+            },
+            "description": "**`DELETE /usuarios/1`**\n\nCaso negativo: un administrador no puede borrarse a si mismo.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del admin logueado |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `409` — no podes eliminar tu propio usuario"
+          }
+        },
+        {
+          "name": "Eliminar usuario con dependencias (debe dar 409)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "2"
+              ]
+            },
+            "description": "**`DELETE /usuarios/2`**\n\nCaso negativo sobre un medico semilla. Antes de borrar se chequean: turnos, agenda, historial clinico, especialidades asignadas y registros de auditoria.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del usuario |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `409` — el usuario tiene turnos, agenda, historial, especialidades o auditoria asociados\n- `404` — el usuario indicado no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Eliminar usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/{{id_usuario_creado}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{id_usuario_creado}}"
+              ]
+            },
+            "description": "**`DELETE /usuarios/{{id_usuario_creado}}`**\n\nBorra el usuario creado en esta carpeta, que no tiene dependencias. Sus notificaciones se borran junto con el, dentro de una transaccion.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del usuario |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` del usuario borrado\n- `404` — el usuario indicado no existe\n- `409` — el usuario tiene dependencias asociadas\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `BAJA` sobre `usuario`."
+          }
+        },
+        {
+          "name": "Listar usuarios con rol no permitido (debe dar 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "**`GET /usuarios`**\n\nCaso negativo: corré antes **Login medico**, **Login operador** o el login del paciente.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `403` — no tenes permisos para acceder a este recurso"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Semana 4 - Auditoria (admin)",
+      "description": "Consulta del registro de auditoria. **Rol requerido: `administrador`.** Cualquier otro rol recibe **403** por el middleware `verificarRol('administrador')` aplicado a nivel de router.\n\n**Como se llena la tabla:** el middleware `auditar(entidad)` envuelve `res.json` en las rutas de `usuarios`, `coberturas`, `especialidades` y `sedes`, y escribe una fila en `log_auditoria` por cada `POST`, `PUT`, `PATCH` o `DELETE` que responda 2xx. Los `GET` no se auditan, y los controladores no tienen una sola linea de codigo de auditoria.\n\nLos `detalle` guardan el body enviado **sin el campo `password`**.\n\nPara ver filas aca, corré primero las carpetas de sedes, especialidades, coberturas o usuarios.",
+      "item": [
+        {
+          "name": "Listar auditoria (sin filtros)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "id_usuario",
+                  "value": "1",
+                  "description": "Filtra por quien hizo la accion (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "entidad",
+                  "value": "sede",
+                  "description": "`usuario` | `cobertura` | `especialidad` | `sede` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "accion",
+                  "value": "ALTA",
+                  "description": "`ALTA` | `BAJA` | `MODIFICACION` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, incluye el dia completo (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limite",
+                  "value": "100",
+                  "description": "Cantidad maxima de filas. Default 100, maximo 500 (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Desplazamiento para paginar. Default 0 (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /auditoria`**\n\nUltimos 100 registros, ordenados del mas nuevo al mas viejo.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total, limite, offset, items }`. Cada item trae `id`, `id_usuario`, `usuario_nombre`, `usuario_rol`, `accion`, `entidad`, `id_entidad`, `detalle` y `fecha`\n- `400` — formato de fecha invalido, `desde` posterior a `hasta`, o `accion` fuera de la lista\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Filtrar por entidad",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria?entidad=sede",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "id_usuario",
+                  "value": "1",
+                  "description": "Filtra por quien hizo la accion (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "entidad",
+                  "value": "sede",
+                  "description": "`usuario` | `cobertura` | `especialidad` | `sede` (opcional)"
+                },
+                {
+                  "key": "accion",
+                  "value": "ALTA",
+                  "description": "`ALTA` | `BAJA` | `MODIFICACION` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, incluye el dia completo (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limite",
+                  "value": "100",
+                  "description": "Cantidad maxima de filas. Default 100, maximo 500 (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Desplazamiento para paginar. Default 0 (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /auditoria`**\n\nSolo las acciones sobre una entidad. Probá cambiando el valor a `usuario`, `cobertura` o `especialidad`.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total, limite, offset, items }`. Cada item trae `id`, `id_usuario`, `usuario_nombre`, `usuario_rol`, `accion`, `entidad`, `id_entidad`, `detalle` y `fecha`\n- `400` — formato de fecha invalido, `desde` posterior a `hasta`, o `accion` fuera de la lista\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Filtrar por usuario",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria?id_usuario=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "id_usuario",
+                  "value": "1",
+                  "description": "Filtra por quien hizo la accion (opcional)"
+                },
+                {
+                  "key": "entidad",
+                  "value": "sede",
+                  "description": "`usuario` | `cobertura` | `especialidad` | `sede` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "accion",
+                  "value": "ALTA",
+                  "description": "`ALTA` | `BAJA` | `MODIFICACION` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, incluye el dia completo (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limite",
+                  "value": "100",
+                  "description": "Cantidad maxima de filas. Default 100, maximo 500 (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Desplazamiento para paginar. Default 0 (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /auditoria`**\n\nTodo lo que hizo un usuario determinado. El id 1 es el administrador semilla.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total, limite, offset, items }`. Cada item trae `id`, `id_usuario`, `usuario_nombre`, `usuario_rol`, `accion`, `entidad`, `id_entidad`, `detalle` y `fecha`\n- `400` — formato de fecha invalido, `desde` posterior a `hasta`, o `accion` fuera de la lista\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Filtrar por accion",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria?accion=ALTA",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "id_usuario",
+                  "value": "1",
+                  "description": "Filtra por quien hizo la accion (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "entidad",
+                  "value": "sede",
+                  "description": "`usuario` | `cobertura` | `especialidad` | `sede` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "accion",
+                  "value": "ALTA",
+                  "description": "`ALTA` | `BAJA` | `MODIFICACION` (opcional)"
+                },
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, incluye el dia completo (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limite",
+                  "value": "100",
+                  "description": "Cantidad maxima de filas. Default 100, maximo 500 (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Desplazamiento para paginar. Default 0 (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /auditoria`**\n\nSolo altas, solo bajas o solo modificaciones.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total, limite, offset, items }`. Cada item trae `id`, `id_usuario`, `usuario_nombre`, `usuario_rol`, `accion`, `entidad`, `id_entidad`, `detalle` y `fecha`\n- `400` — formato de fecha invalido, `desde` posterior a `hasta`, o `accion` fuera de la lista\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Filtrar por rango de fechas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria?desde={{desde}}&hasta={{hasta}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "id_usuario",
+                  "value": "1",
+                  "description": "Filtra por quien hizo la accion (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "entidad",
+                  "value": "sede",
+                  "description": "`usuario` | `cobertura` | `especialidad` | `sede` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "accion",
+                  "value": "ALTA",
+                  "description": "`ALTA` | `BAJA` | `MODIFICACION` (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, incluye el dia completo (opcional)"
+                },
+                {
+                  "key": "limite",
+                  "value": "100",
+                  "description": "Cantidad maxima de filas. Default 100, maximo 500 (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Desplazamiento para paginar. Default 0 (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /auditoria`**\n\n`log_auditoria.fecha` es DATETIME, y el filtro usa `fecha < DATE_ADD(hasta, INTERVAL 1 DAY)`, asi que `hasta` incluye el dia completo (no se pierden los registros de la tarde).\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total, limite, offset, items }`. Cada item trae `id`, `id_usuario`, `usuario_nombre`, `usuario_rol`, `accion`, `entidad`, `id_entidad`, `detalle` y `fecha`\n- `400` — formato de fecha invalido, `desde` posterior a `hasta`, o `accion` fuera de la lista\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Filtros combinados y paginado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria?entidad=sede&accion=ALTA&limite=100&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "id_usuario",
+                  "value": "1",
+                  "description": "Filtra por quien hizo la accion (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "entidad",
+                  "value": "sede",
+                  "description": "`usuario` | `cobertura` | `especialidad` | `sede` (opcional)"
+                },
+                {
+                  "key": "accion",
+                  "value": "ALTA",
+                  "description": "`ALTA` | `BAJA` | `MODIFICACION` (opcional)"
+                },
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, incluye el dia completo (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limite",
+                  "value": "100",
+                  "description": "Cantidad maxima de filas. Default 100, maximo 500 (opcional)"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Desplazamiento para paginar. Default 0 (opcional)"
+                }
+              ]
+            },
+            "description": "**`GET /auditoria`**\n\nTodos los filtros se combinan con AND. `total` siempre refleja el total filtrado, aunque `items` venga recortado por `limite`.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total, limite, offset, items }`. Cada item trae `id`, `id_usuario`, `usuario_nombre`, `usuario_rol`, `accion`, `entidad`, `id_entidad`, `detalle` y `fecha`\n- `400` — formato de fecha invalido, `desde` posterior a `hasta`, o `accion` fuera de la lista\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Rango de fechas invertido (debe dar 400)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria?desde=2026-12-01&hasta=2026-01-01",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-12-01",
+                  "description": "Fecha inicial posterior a la final"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-01-01",
+                  "description": "Fecha final anterior a la inicial"
+                }
+              ]
+            },
+            "description": "**`GET /auditoria`**\n\nCaso negativo del validador de rango compartido (`src/utils/fechas.js`).\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `400` — el parametro desde no puede ser posterior a hasta"
+          }
+        },
+        {
+          "name": "Auditoria con rol no permitido (debe dar 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ]
+            },
+            "description": "**`GET /auditoria`**\n\nCaso negativo del criterio de aceptacion: corré antes **Login medico**, **Login operador** o el login del paciente.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `403` — no tenes permisos para acceder a este recurso"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Semana 4 - Reportes y estadisticas (admin)",
+      "description": "Indicadores agregados sobre turnos. **Rol requerido: `administrador`.** Cualquier otro rol recibe **403** por el middleware `verificarRol('administrador')` aplicado a nivel de router.\n\nNo usan tablas nuevas: son consultas `COUNT` / `SUM` / `GROUP BY` sobre `turno`, `especialidad`, `sede` y `usuario`.\n\n**Los cuatro aceptan `desde` y `hasta`** (formato `YYYY-MM-DD`, ambos inclusive y ambos opcionales). Sin rango, se toma la historia completa.\n\nCon los datos de `database/clinica.sql`, sin filtrar: **35 turnos** (23 atendidos, 6 cancelados, 6 confirmados), tasa de cancelacion **17.14%**.",
+      "item": [
+        {
+          "name": "Turnos por especialidad",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/turnos-por-especialidad",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "turnos-por-especialidad"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /reportes/turnos-por-especialidad`**\n\nCantidad de turnos por especialidad, con el desglose por estado.\n\nLas especialidades **sin turnos aparecen igual, con `cantidad_turnos: 0`**: el filtro de fecha va dentro del `ON` del LEFT JOIN, no en el `WHERE`.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total_turnos, items }`. Cada item: `id_especialidad`, `especialidad`, `cantidad_turnos`, `confirmados`, `atendidos`, `cancelados` (todos numeros)\n- `400` — formato de fecha invalido, o `desde` posterior a `hasta`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Turnos por especialidad (con rango)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/turnos-por-especialidad?desde={{desde}}&hasta={{hasta}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "turnos-por-especialidad"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, inclusive (opcional)"
+                }
+              ]
+            },
+            "description": "**`GET /reportes/turnos-por-especialidad`**\n\nEl mismo reporte acotado a un periodo. Las 5 especialidades siguen apareciendo, aunque no tengan turnos en el rango.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — mismo formato, con `filtros.desde` y `filtros.hasta` reflejando el rango aplicado\n- `400` — formato de fecha invalido, o `desde` posterior a `hasta`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Turnos por sede",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/turnos-por-sede",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "turnos-por-sede"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /reportes/turnos-por-sede`**\n\nCantidad de turnos por sede, con desglose por estado. Las sedes sin turnos tambien aparecen, con 0.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total_turnos, items }`. Cada item: `id_sede`, `sede`, `cantidad_turnos`, `confirmados`, `atendidos`, `cancelados`\n- `400` — formato de fecha invalido, o `desde` posterior a `hasta`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Turnos por sede (con rango)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/turnos-por-sede?desde={{desde}}&hasta={{hasta}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "turnos-por-sede"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, inclusive (opcional)"
+                }
+              ]
+            },
+            "description": "**`GET /reportes/turnos-por-sede`**\n\nEl mismo reporte acotado a un periodo.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — mismo formato, filtrado por fecha\n- `400` — formato de fecha invalido, o `desde` posterior a `hasta`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Ranking de medicos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/ranking-medicos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "ranking-medicos"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "limite",
+                  "value": "3",
+                  "description": "Recorta el ranking a los primeros N (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /reportes/ranking-medicos`**\n\nRanking **completo** de medicos por cantidad de turnos `atendido` (no solo el primero), ordenado de mayor a menor y con el campo `posicion`.\n\nLos medicos sin turnos atendidos aparecen al final con 0.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total_turnos_atendidos, items }`. Cada item: `posicion`, `id_medico`, `medico`, `sede`, `turnos_atendidos`\n- `400` — formato de fecha invalido, o `desde` posterior a `hasta`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Ranking de medicos (con rango y limite)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/ranking-medicos?desde={{desde}}&hasta={{hasta}}&limite=2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "ranking-medicos"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, inclusive (opcional)"
+                },
+                {
+                  "key": "limite",
+                  "value": "2",
+                  "description": "Recorta el ranking a los primeros N (opcional)"
+                }
+              ]
+            },
+            "description": "**`GET /reportes/ranking-medicos`**\n\nTop N de un periodo determinado.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — mismo formato, con `items` recortado a `limite`\n- `400` — formato de fecha invalido, o `desde` posterior a `hasta`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Tasa de cancelacion",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/tasa-cancelacion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "tasa-cancelacion"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, inclusive (opcional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**`GET /reportes/tasa-cancelacion`**\n\nTurnos cancelados sobre el total del periodo.\n\n`tasa_cancelacion` va de 0 a 1 con 4 decimales, y `porcentaje_cancelacion` de 0 a 100 con 2. Si no hay turnos en el rango, ambos valen `0` (no `NaN`).\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total_turnos, turnos_cancelados, turnos_atendidos, turnos_confirmados, tasa_cancelacion, porcentaje_cancelacion }`\n- `400` — formato de fecha invalido, o `desde` posterior a `hasta`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Tasa de cancelacion (con rango)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/tasa-cancelacion?desde={{desde}}&hasta={{hasta}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "tasa-cancelacion"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{desde}}",
+                  "description": "Fecha inicial `YYYY-MM-DD`, inclusive (opcional)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{hasta}}",
+                  "description": "Fecha final `YYYY-MM-DD`, inclusive (opcional)"
+                }
+              ]
+            },
+            "description": "**`GET /reportes/tasa-cancelacion`**\n\nLa misma tasa acotada a un periodo. Sirve para verificar la consistencia con los turnos: cancelá un turno con `PATCH /turnos/:id/cancelar` y volvé a pedir este reporte — `turnos_cancelados` sube en 1, `total_turnos` no cambia y la tasa se recalcula.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — mismo formato, filtrado por fecha\n- `400` — formato de fecha invalido, o `desde` posterior a `hasta`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+          }
+        },
+        {
+          "name": "Rango sin turnos (total 0, sin NaN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/tasa-cancelacion?desde=2030-01-01&hasta=2030-12-31",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "tasa-cancelacion"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2030-01-01",
+                  "description": "Inicio de un periodo sin turnos"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2030-12-31",
+                  "description": "Fin de un periodo sin turnos"
+                }
+              ]
+            },
+            "description": "**`GET /reportes/tasa-cancelacion`**\n\nCaso borde: un periodo sin ningun turno devuelve todo en 0, con la division por cero contemplada.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `total_turnos: 0`, `tasa_cancelacion: 0`, `porcentaje_cancelacion: 0`"
+          }
+        },
+        {
+          "name": "Fecha con formato invalido (debe dar 400)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/turnos-por-sede?desde=ayer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "turnos-por-sede"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "ayer",
+                  "description": "Valor que no respeta el formato"
+                }
+              ]
+            },
+            "description": "**`GET /reportes/turnos-por-sede`**\n\nCaso negativo del validador compartido: solo se acepta `YYYY-MM-DD`, y la fecha tiene que existir en el calendario.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `400` — el parametro desde debe tener el formato YYYY-MM-DD"
+          }
+        },
+        {
+          "name": "Reportes con rol no permitido (debe dar 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reportes/tasa-cancelacion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reportes",
+                "tasa-cancelacion"
+              ]
+            },
+            "description": "**`GET /reportes/tasa-cancelacion`**\n\nCaso negativo del criterio de aceptacion: corré antes **Login medico**, **Login operador** o el login del paciente.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `403` — no tenes permisos para acceder a este recurso"
           }
         }
       ]
