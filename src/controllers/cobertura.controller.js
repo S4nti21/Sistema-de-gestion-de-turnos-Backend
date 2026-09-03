@@ -74,6 +74,14 @@ async function eliminarCobertura(req, res) {
       return enviarRespuesta(res, 409, "No se puede eliminar la cobertura: tiene usuarios asociados");
     }
 
+    const [turnos] = await pool.query(
+      "SELECT id FROM turno WHERE id_cobertura = ? LIMIT 1",
+      [id]
+    );
+    if (turnos.length > 0) {
+      return enviarRespuesta(res, 409, "No se puede eliminar la cobertura: tiene turnos asociados");
+    }
+
     await pool.query("DELETE FROM cobertura WHERE id = ?", [id]);
 
     return enviarRespuesta(res, 200, "ok", { id: Number(id) });

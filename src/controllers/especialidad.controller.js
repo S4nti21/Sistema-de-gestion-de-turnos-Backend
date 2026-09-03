@@ -83,6 +83,22 @@ async function eliminarEspecialidad(req, res) {
       return enviarRespuesta(res, 409, "No se puede eliminar la especialidad: tiene médicos asociados");
     }
 
+    const [agenda] = await pool.query(
+      "SELECT id FROM agenda WHERE id_especialidad = ? LIMIT 1",
+      [id]
+    );
+    if (agenda.length > 0) {
+      return enviarRespuesta(res, 409, "No se puede eliminar la especialidad: tiene agenda asociada");
+    }
+
+    const [turnos] = await pool.query(
+      "SELECT id FROM turno WHERE id_especialidad = ? LIMIT 1",
+      [id]
+    );
+    if (turnos.length > 0) {
+      return enviarRespuesta(res, 409, "No se puede eliminar la especialidad: tiene turnos asociados");
+    }
+
     await pool.query("DELETE FROM especialidad WHERE id = ?", [id]);
 
     return enviarRespuesta(res, 200, "ok", { id: Number(id) });

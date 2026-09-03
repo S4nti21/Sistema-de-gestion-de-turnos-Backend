@@ -45,6 +45,11 @@ async function registro(req, res) {
 
     return enviarRespuesta(res, 201, "ok", usuarios[0]);
   } catch (error) {
+    // El índice único de dni/email cierra la ventana de carrera que deja el SELECT previo.
+    if (error.code === "ER_DUP_ENTRY") {
+      return enviarRespuesta(res, 409, "Ya existe un usuario registrado con ese DNI o email");
+    }
+
     console.error(error);
     return enviarRespuesta(res, 500, "Error al registrar el usuario");
   }
