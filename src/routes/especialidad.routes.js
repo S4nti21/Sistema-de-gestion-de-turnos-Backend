@@ -9,11 +9,12 @@ const { verificarToken, verificarRol } = require("../middlewares/auth.middleware
 
 const router = Router();
 
-router.use(verificarToken, verificarRol("administrador"));
+router.use(verificarToken);
 
-router.post("/", crearEspecialidad);
+// El listado lo usan todos los roles para elegir una especialidad; el ABM es solo del administrador.
 router.get("/", listarEspecialidades);
-router.put("/:id", actualizarEspecialidad);
-router.delete("/:id", eliminarEspecialidad);
+router.post("/", verificarRol("administrador"), crearEspecialidad);
+router.put("/:id", verificarRol("administrador"), actualizarEspecialidad);
+router.delete("/:id", verificarRol("administrador"), eliminarEspecialidad);
 
 module.exports = router;

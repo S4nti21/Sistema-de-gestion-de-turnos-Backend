@@ -4,11 +4,12 @@ const { verificarToken, verificarRol } = require("../middlewares/auth.middleware
 
 const router = Router();
 
-router.use(verificarToken, verificarRol("administrador"));
+router.use(verificarToken);
 
-router.post("/", crearSede);
+// El listado lo usan todos los roles para elegir una sede; el ABM es solo del administrador.
 router.get("/", listarSedes);
-router.put("/:id", actualizarSede);
-router.delete("/:id", eliminarSede);
+router.post("/", verificarRol("administrador"), crearSede);
+router.put("/:id", verificarRol("administrador"), actualizarSede);
+router.delete("/:id", verificarRol("administrador"), eliminarSede);
 
 module.exports = router;

@@ -1,20 +1,17 @@
 const pool = require("../config/db");
 const { enviarRespuesta } = require("../utils/respuesta");
 const { obtenerTurnoDetalle } = require("./turno.controller");
+const { validarDatosHistorial, insertarHistorial } = require("../utils/historial");
 
 async function registrarHistorial(req, res) {
   const connection = await pool.getConnection();
 
   try {
     const { id_turno } = req.params;
-    const { diagnostico, tratamiento, observaciones } = req.body;
 
-    if (!diagnostico || !tratamiento || !observaciones) {
-      return enviarRespuesta(
-        res,
-        400,
-        "Faltan datos obligatorios: diagnostico, tratamiento, observaciones"
-      );
+    const errorDatos = validarDatosHistorial(req.body);
+    if (errorDatos) {
+      return enviarRespuesta(res, 400, errorDatos);
     }
 
     await connection.beginTransaction();
@@ -44,12 +41,7 @@ async function registrarHistorial(req, res) {
       return enviarRespuesta(res, 409, "El turno ya tiene historial clinico registrado");
     }
 
-    const [resultado] = await connection.query(
-      `INSERT INTO historial_clinico
-       (id_turno, id_medico, id_paciente, diagnostico, tratamiento, observaciones, fecha)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [id_turno, req.usuario.id, turno.id_paciente, diagnostico, tratamiento, observaciones]
-    );
+    const idHistorial = await insertarHistorial(connection, turno, req.body);
 
     const [historial] = await connection.query(
       `SELECT
@@ -66,7 +58,7 @@ async function registrarHistorial(req, res) {
        FROM historial_clinico hc
        INNER JOIN turno t ON t.id = hc.id_turno
        WHERE hc.id = ?`,
-      [resultado.insertId]
+      [idHistorial]
     );
 
     await connection.commit();
@@ -105,10 +97,14 @@ async function consultarHistorialPaciente(req, res) {
         hc.fecha,
         t.fecha AS turno_fecha,
         t.hora AS turno_hora,
-        CONCAT(m.nombre, ' ', m.apellido) AS medico_nombre
+        CONCAT(m.nombre, ' ', m.apellido) AS medico_nombre,
+        e.descripcion AS especialidad_descripcion,
+        s.nombre AS sede_nombre
       FROM historial_clinico hc
       INNER JOIN turno t ON t.id = hc.id_turno
       INNER JOIN usuario m ON m.id = hc.id_medico
+      LEFT JOIN especialidad e ON e.id = t.id_especialidad
+      LEFT JOIN sede s ON s.id = t.id_sede
       WHERE hc.id_paciente = ?
     `;
     const valores = [id_paciente];

@@ -1,9 +1,12 @@
 const bcrypt = require("bcrypt");
 const pool = require("../config/db");
 const { enviarRespuesta } = require("../utils/respuesta");
+const { hoyIso } = require("../utils/fechas");
 
 const SALT_ROUNDS = 10;
 const ROLES_VALIDOS = ["paciente", "medico", "operador", "administrador"];
+const LIMITE_POR_DEFECTO = 10;
+const LIMITE_MAXIMO = 100;
 
 // Nunca se devuelve la columna password: siempre se listan las columnas explicitas.
 const SELECT_USUARIO = `
@@ -11,9 +14,36 @@ const SELECT_USUARIO = `
   FROM usuario
 `;
 
-async function obtenerUsuarioPorId(id) {
-  const [usuarios] = await pool.query(`${SELECT_USUARIO} WHERE id = ?`, [id]);
-  return usuarios[0] || null;
+const SELECT_USUARIO_LISTADO = `
+  SELECT
+    u.id, u.nombre, u.apellido, u.dni, u.email, u.telefono, u.fecha_nacimiento, u.rol,
+    u.id_sede, u.id_cobertura,
+    s.nombre AS sede_nombre
+  FROM usuario u
+  LEFT JOIN sede s ON s.id = u.id_sede
+`;
+
+// A los medicos se les agrega la lista de especialidades asignadas.
+async function obtenerUsuarioPorId(id, conexion = pool) {
+  const [usuarios] = await conexion.query(`${SELECT_USUARIO} WHERE id = ?`, [id]);
+  const usuario = usuarios[0];
+  if (!usuario) {
+    return null;
+  }
+
+  if (usuario.rol === "medico") {
+    const [especialidades] = await conexion.query(
+      `SELECT e.id, e.descripcion
+       FROM medico_especialidad me
+       INNER JOIN especialidad e ON e.id = me.id_especialidad
+       WHERE me.id_medico = ?
+       ORDER BY e.descripcion`,
+      [id]
+    );
+    usuario.especialidades = especialidades;
+  }
+
+  return usuario;
 }
 
 // Cada rol define que vinculo es obligatorio y cual debe quedar en NULL:
@@ -56,9 +86,44 @@ async function validarVinculos(vinculos) {
   return null;
 }
 
+// Las especialidades (ids) solo aplican a los medicos. Si no se envian, en el alta
+// el medico queda sin especialidades y en la modificacion se conservan las que tenia.
+async function validarEspecialidades(rol, especialidades) {
+  if (rol !== "medico" || especialidades === undefined) {
+    return { ids: null };
+  }
+
+  if (!Array.isArray(especialidades) || especialidades.length === 0) {
+    return { error: "Un médico debe tener al menos una especialidad" };
+  }
+
+  const ids = [...new Set(especialidades.map(Number))];
+  if (ids.some((id) => !Number.isInteger(id) || id <= 0)) {
+    return { error: "Las especialidades deben indicarse con sus ids" };
+  }
+
+  const [existentes] = await pool.query("SELECT id FROM especialidad WHERE id IN (?)", [ids]);
+  if (existentes.length !== ids.length) {
+    return { error: "Alguna de las especialidades indicadas no existe" };
+  }
+
+  return { ids };
+}
+
+async function guardarEspecialidades(connection, idMedico, ids) {
+  await connection.query(
+    "DELETE FROM medico_especialidad WHERE id_medico = ? AND id_especialidad NOT IN (?)",
+    [idMedico, ids]
+  );
+  await connection.query(
+    "INSERT IGNORE INTO medico_especialidad (id_medico, id_especialidad) VALUES ?",
+    [ids.map((idEspecialidad) => [idMedico, idEspecialidad])]
+  );
+}
+
 async function listarUsuarios(req, res) {
   try {
-    const { rol, id_sede, dni } = req.query;
+    const { rol, id_sede, dni, nombre, apellido } = req.query;
 
     if (rol && !ROLES_VALIDOS.includes(rol)) {
       return enviarRespuesta(res, 400, `El rol debe ser uno de: ${ROLES_VALIDOS.join(", ")}`);
@@ -68,28 +133,51 @@ async function listarUsuarios(req, res) {
     const parametros = [];
 
     if (rol) {
-      condiciones.push("rol = ?");
+      condiciones.push("u.rol = ?");
       parametros.push(rol);
     }
 
     if (id_sede) {
-      condiciones.push("id_sede = ?");
+      condiciones.push("u.id_sede = ?");
       parametros.push(id_sede);
     }
 
     if (dni) {
-      condiciones.push("dni = ?");
+      condiciones.push("u.dni = ?");
       parametros.push(dni);
+    }
+
+    if (nombre) {
+      condiciones.push("u.nombre LIKE CONCAT('%', ?, '%')");
+      parametros.push(String(nombre).trim());
+    }
+
+    if (apellido) {
+      condiciones.push("u.apellido LIKE CONCAT('%', ?, '%')");
+      parametros.push(String(apellido).trim());
     }
 
     const where = condiciones.length > 0 ? `WHERE ${condiciones.join(" AND ")}` : "";
 
-    const [usuarios] = await pool.query(
-      `${SELECT_USUARIO} ${where} ORDER BY apellido, nombre`,
+    const limite = Math.min(Math.max(Number(req.query.limite) || LIMITE_POR_DEFECTO, 1), LIMITE_MAXIMO);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+    const [totales] = await pool.query(
+      `SELECT COUNT(*) AS total FROM usuario u ${where}`,
       parametros
     );
 
-    return enviarRespuesta(res, 200, "ok", usuarios);
+    const [usuarios] = await pool.query(
+      `${SELECT_USUARIO_LISTADO} ${where} ORDER BY u.apellido, u.nombre, u.id LIMIT ? OFFSET ?`,
+      [...parametros, limite, offset]
+    );
+
+    return enviarRespuesta(res, 200, "ok", {
+      total: Number(totales[0].total),
+      limite,
+      offset,
+      items: usuarios,
+    });
   } catch (error) {
     console.error(error);
     return enviarRespuesta(res, 500, "Error al obtener los usuarios");
@@ -111,9 +199,11 @@ async function obtenerUsuario(req, res) {
 }
 
 async function crearUsuario(req, res) {
+  const connection = await pool.getConnection();
+
   try {
     const { nombre, apellido, dni, email, password, fecha_nacimiento, telefono, rol } = req.body;
-    const { id_sede, id_cobertura } = req.body;
+    const { id_sede, id_cobertura, especialidades } = req.body;
 
     if (!nombre || !apellido || !dni || !email || !password || !fecha_nacimiento || !rol) {
       return enviarRespuesta(
@@ -137,6 +227,11 @@ async function crearUsuario(req, res) {
       return enviarRespuesta(res, 400, errorVinculos);
     }
 
+    const especialidadesValidadas = await validarEspecialidades(rol, especialidades);
+    if (especialidadesValidadas.error) {
+      return enviarRespuesta(res, 400, especialidadesValidadas.error);
+    }
+
     const [existentes] = await pool.query("SELECT id FROM usuario WHERE dni = ? OR email = ?", [
       dni,
       email,
@@ -147,7 +242,9 @@ async function crearUsuario(req, res) {
 
     const passwordHasheada = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const [resultado] = await pool.query(
+    await connection.beginTransaction();
+
+    const [resultado] = await connection.query(
       `INSERT INTO usuario (apellido, nombre, fecha_nacimiento, password, rol, email, telefono, dni, id_sede, id_cobertura)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -164,9 +261,17 @@ async function crearUsuario(req, res) {
       ]
     );
 
+    if (especialidadesValidadas.ids) {
+      await guardarEspecialidades(connection, resultado.insertId, especialidadesValidadas.ids);
+    }
+
+    await connection.commit();
+
     const usuario = await obtenerUsuarioPorId(resultado.insertId);
     return enviarRespuesta(res, 201, "ok", usuario);
   } catch (error) {
+    await connection.rollback();
+
     // El indice unico de dni/email cierra la ventana de carrera que deja el SELECT previo.
     if (error.code === "ER_DUP_ENTRY") {
       return enviarRespuesta(res, 409, "Ya existe un usuario registrado con ese DNI o email");
@@ -174,10 +279,14 @@ async function crearUsuario(req, res) {
 
     console.error(error);
     return enviarRespuesta(res, 500, "Error al crear el usuario");
+  } finally {
+    connection.release();
   }
 }
 
 async function actualizarUsuario(req, res) {
+  const connection = await pool.getConnection();
+
   try {
     const { id } = req.params;
 
@@ -187,7 +296,7 @@ async function actualizarUsuario(req, res) {
     }
 
     const { nombre, apellido, dni, email, fecha_nacimiento, telefono, password, rol } = req.body;
-    const { id_sede, id_cobertura } = req.body;
+    const { id_sede, id_cobertura, especialidades } = req.body;
 
     if (!nombre || !apellido || !dni || !email || !fecha_nacimiento || !rol) {
       return enviarRespuesta(
@@ -211,6 +320,29 @@ async function actualizarUsuario(req, res) {
       return enviarRespuesta(res, 400, errorVinculos);
     }
 
+    const especialidadesValidadas = await validarEspecialidades(rol, especialidades);
+    if (especialidadesValidadas.error) {
+      return enviarRespuesta(res, 400, especialidadesValidadas.error);
+    }
+
+    // No se puede quitar una especialidad con la que el medico ya tiene agenda cargada.
+    if (especialidadesValidadas.ids) {
+      const [enUso] = await pool.query(
+        `SELECT DISTINCT e.descripcion
+         FROM agenda a
+         INNER JOIN especialidad e ON e.id = a.id_especialidad
+         WHERE a.id_medico = ? AND a.fecha >= ? AND a.id_especialidad NOT IN (?)`,
+        [id, hoyIso(), especialidadesValidadas.ids]
+      );
+      if (enUso.length > 0) {
+        return enviarRespuesta(
+          res,
+          409,
+          `No se puede quitar ${enUso.map((fila) => fila.descripcion).join(", ")}: el médico tiene agenda cargada con esa especialidad`
+        );
+      }
+    }
+
     const [existentes] = await pool.query(
       "SELECT id FROM usuario WHERE (dni = ? OR email = ?) AND id <> ?",
       [dni, email, id]
@@ -222,7 +354,9 @@ async function actualizarUsuario(req, res) {
     // La password es opcional: si no viene, se conserva la que ya tenia.
     const passwordHasheada = password ? await bcrypt.hash(password, SALT_ROUNDS) : null;
 
-    await pool.query(
+    await connection.beginTransaction();
+
+    await connection.query(
       `UPDATE usuario
        SET apellido = ?, nombre = ?, fecha_nacimiento = ?, rol = ?, email = ?, telefono = ?,
            dni = ?, id_sede = ?, id_cobertura = ?, password = COALESCE(?, password)
@@ -242,15 +376,25 @@ async function actualizarUsuario(req, res) {
       ]
     );
 
+    if (especialidadesValidadas.ids) {
+      await guardarEspecialidades(connection, Number(id), especialidadesValidadas.ids);
+    }
+
+    await connection.commit();
+
     const usuario = await obtenerUsuarioPorId(id);
     return enviarRespuesta(res, 200, "ok", usuario);
   } catch (error) {
+    await connection.rollback();
+
     if (error.code === "ER_DUP_ENTRY") {
       return enviarRespuesta(res, 409, "Ya existe otro usuario registrado con ese DNI o email");
     }
 
     console.error(error);
     return enviarRespuesta(res, 500, "Error al actualizar el usuario");
+  } finally {
+    connection.release();
   }
 }
 

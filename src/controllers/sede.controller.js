@@ -97,6 +97,11 @@ async function eliminarSede(req, res) {
       return enviarRespuesta(res, 409, "No se puede eliminar la sede: tiene agenda asociada");
     }
 
+    const [turnos] = await pool.query("SELECT id FROM turno WHERE id_sede = ? LIMIT 1", [id]);
+    if (turnos.length > 0) {
+      return enviarRespuesta(res, 409, "No se puede eliminar la sede: tiene turnos asociados");
+    }
+
     await pool.query("DELETE FROM sede WHERE id = ?", [id]);
 
     return enviarRespuesta(res, 200, "ok", { id: Number(id) });

@@ -152,6 +152,11 @@ CREATE TABLE `log_auditoria` (
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+-- Datos de prueba. Las fechas de agenda, turnos, historial, notificaciones y
+-- auditoria se calculan a partir del dia en que se importa el script: siempre hay
+-- turnos de hoy, futuros y pasados para probar cada rol.
+SET @hoy = CURDATE();
+
 INSERT INTO `sede` (`id`, `nombre`, `direccion`, `telefono`) VALUES
 (1, 'Sede Centro', 'San Martin 123',    '3424000001'),
 (2, 'Sede Norte',  'Av. Rivadavia 456', '3424000002'),
@@ -170,6 +175,7 @@ INSERT INTO `especialidad` (`id`, `descripcion`) VALUES
 (4, 'Pediatria'),
 (5, 'Traumatologia');
 
+-- Todos los usuarios tienen la password Password123!
 INSERT INTO `usuario` (`id`, `apellido`, `nombre`, `fecha_nacimiento`, `password`, `rol`, `email`, `telefono`, `dni`, `id_sede`, `id_cobertura`) VALUES
 (1,  'Gomez',    'Marcos',  '1975-08-01', '$2b$10$TE23KITugmTG72PzcQVQbOM9SXAEedqNV0y3G6FWQDRJPMYstBaaO', 'administrador', 'mgomez@clinica.com',   '3424222333', '10000001', NULL, NULL),
 (2,  'Lopez',    'Ana',     '1980-05-10', '$2b$10$TE23KITugmTG72PzcQVQbOM9SXAEedqNV0y3G6FWQDRJPMYstBaaO', 'medico',        'alopez@clinica.com',   '3424111222', '10000002', 1,    NULL),
@@ -188,80 +194,95 @@ INSERT INTO `medico_especialidad` (`id`, `id_medico`, `id_especialidad`) VALUES
 (2, 2, 2),
 (3, 4, 1),
 (4, 4, 2),
-(5, 5, 4);
+(5, 5, 4),
+(6, 5, 3);
 
+-- Ana Lopez (id 2) atiende en dos sedes: Traumatologia en Sede Centro a la manana
+-- y Clinica Medica en Sede Norte a la tarde.
 INSERT INTO `agenda` (`id`, `hora_entrada`, `hora_salida`, `fecha`, `id_medico`, `id_especialidad`, `id_sede`) VALUES
-(1,  '08:00', '13:00', '2026-06-10', 2, 5, 1),
-(2,  '14:00', '19:00', '2026-06-17', 2, 2, 1),
-(3,  '08:00', '13:00', '2026-07-08', 2, 5, 1),
-(4,  '14:00', '19:00', '2026-07-15', 2, 2, 1),
-(5,  '08:00', '13:00', '2026-08-05', 2, 5, 1),
-(6,  '14:00', '19:00', '2026-08-12', 2, 2, 1),
-(7,  '08:00', '13:00', '2026-08-19', 2, 5, 1),
-(8,  '08:00', '13:00', '2026-09-09', 2, 5, 1),
-(9,  '14:00', '19:00', '2026-09-16', 2, 2, 1),
-(10, '08:00', '13:00', '2026-09-23', 2, 5, 1),
-(11, '09:00', '14:00', '2026-06-24', 4, 1, 2),
-(12, '15:00', '20:00', '2026-07-08', 4, 2, 2),
-(13, '09:00', '14:00', '2026-07-22', 4, 1, 2),
-(14, '09:00', '14:00', '2026-08-05', 4, 1, 2),
-(15, '15:00', '20:00', '2026-08-19', 4, 2, 2),
-(16, '09:00', '14:00', '2026-08-26', 4, 1, 2),
-(17, '09:00', '14:00', '2026-09-09', 4, 1, 2),
-(18, '15:00', '20:00', '2026-09-16', 4, 2, 2),
-(19, '09:00', '14:00', '2026-09-30', 4, 1, 2),
-(20, '08:00', '12:00', '2026-06-10', 5, 4, 3),
-(21, '08:00', '12:00', '2026-07-15', 5, 4, 3),
-(22, '08:00', '12:00', '2026-08-12', 5, 4, 3),
-(23, '08:00', '12:00', '2026-08-26', 5, 4, 3),
-(24, '08:00', '12:00', '2026-09-23', 5, 4, 3);
+(1,  '08:00', '12:00', @hoy,                   2, 5, 1),
+(2,  '14:00', '18:00', @hoy,                   2, 2, 2),
+(3,  '08:00', '12:00', @hoy + INTERVAL 1 DAY,  2, 5, 1),
+(4,  '14:00', '18:00', @hoy + INTERVAL 2 DAY,  2, 2, 2),
+(5,  '08:00', '12:00', @hoy + INTERVAL 7 DAY,  2, 5, 1),
+(6,  '14:00', '18:00', @hoy + INTERVAL 8 DAY,  2, 2, 2),
+(7,  '08:00', '12:00', @hoy - INTERVAL 7 DAY,  2, 5, 1),
+(8,  '14:00', '18:00', @hoy - INTERVAL 14 DAY, 2, 2, 2),
+(9,  '08:00', '12:00', @hoy - INTERVAL 30 DAY, 2, 5, 1),
+(10, '14:00', '18:00', @hoy - INTERVAL 45 DAY, 2, 2, 1),
+(11, '09:00', '13:00', @hoy,                   4, 1, 2),
+(12, '09:00', '13:00', @hoy + INTERVAL 1 DAY,  4, 1, 2),
+(13, '15:00', '19:00', @hoy + INTERVAL 3 DAY,  4, 2, 2),
+(14, '09:00', '13:00', @hoy + INTERVAL 7 DAY,  4, 1, 2),
+(15, '09:00', '13:00', @hoy - INTERVAL 7 DAY,  4, 1, 2),
+(16, '15:00', '19:00', @hoy - INTERVAL 21 DAY, 4, 2, 2),
+(17, '09:00', '13:00', @hoy - INTERVAL 35 DAY, 4, 1, 2),
+(18, '08:00', '12:00', @hoy,                   5, 4, 3),
+(19, '14:00', '17:00', @hoy + INTERVAL 2 DAY,  5, 3, 3),
+(20, '08:00', '12:00', @hoy + INTERVAL 4 DAY,  5, 4, 3),
+(21, '08:00', '12:00', @hoy - INTERVAL 10 DAY, 5, 4, 3),
+(22, '14:00', '17:00', @hoy - INTERVAL 28 DAY, 5, 3, 3);
 
+-- Turnos en los tres estados: atendidos y cancelados en el pasado, confirmados hoy y
+-- en los proximos dias.
 INSERT INTO `turno` (`id`, `id_paciente`, `id_medico`, `id_especialidad`, `id_sede`, `id_agenda`, `fecha`, `hora`, `nota`, `id_cobertura`, `estado`) VALUES
-(1,  7,  2, 5, 1, 1,  '2026-06-10', '08:30', 'Control post operatorio',  1, 'atendido'),
-(2,  8,  2, 5, 1, 1,  '2026-06-10', '09:30', 'Dolor de rodilla',         1, 'atendido'),
-(3,  9,  2, 5, 1, 1,  '2026-06-10', '10:30', 'Esguince de tobillo',      2, 'cancelado'),
-(4,  10, 2, 2, 1, 2,  '2026-06-17', '15:00', 'Chequeo general',          3, 'atendido'),
-(5,  11, 2, 2, 1, 2,  '2026-06-17', '16:00', 'Control de presion',       4, 'atendido'),
-(6,  9,  4, 1, 2, 11, '2026-06-24', '09:30', 'Electrocardiograma',       2, 'atendido'),
-(7,  10, 4, 1, 2, 11, '2026-06-24', '11:00', 'Control cardiologico',     3, 'cancelado'),
-(8,  7,  5, 4, 3, 20, '2026-06-10', '08:30', 'Control pediatrico',       1, 'atendido'),
-(9,  7,  2, 5, 1, 3,  '2026-07-08', '08:30', 'Control de yeso',          1, 'atendido'),
-(10, 8,  2, 5, 1, 3,  '2026-07-08', '10:00', 'Dolor lumbar',             1, 'atendido'),
-(11, 11, 4, 2, 2, 12, '2026-07-08', '15:30', 'Chequeo anual',            4, 'atendido'),
-(12, 9,  2, 2, 1, 4,  '2026-07-15', '14:30', 'Analisis de sangre',       2, 'atendido'),
-(13, 10, 2, 2, 1, 4,  '2026-07-15', '16:00', 'Control clinico',          3, 'cancelado'),
-(14, 8,  5, 4, 3, 21, '2026-07-15', '09:00', 'Vacunacion',               1, 'atendido'),
-(15, 11, 5, 4, 3, 21, '2026-07-15', '10:30', 'Control de crecimiento',   4, 'atendido'),
-(16, 7,  4, 1, 2, 13, '2026-07-22', '09:30', 'Ecocardiograma',           1, 'atendido'),
-(17, 9,  4, 1, 2, 13, '2026-07-22', '11:30', 'Control de arritmia',      2, 'atendido'),
-(18, 7,  2, 5, 1, 5,  '2026-08-05', '08:30', 'Rehabilitacion',           1, 'atendido'),
-(19, 8,  2, 5, 1, 5,  '2026-08-05', '10:00', 'Control de fractura',      1, 'atendido'),
-(20, 10, 4, 1, 2, 14, '2026-08-05', '09:30', 'Control de presion',       3, 'atendido'),
-(21, 9,  2, 2, 1, 6,  '2026-08-12', '14:30', 'Consulta general',         2, 'atendido'),
-(22, 11, 5, 4, 3, 22, '2026-08-12', '08:30', 'Control pediatrico',       4, 'atendido'),
-(23, 10, 5, 4, 3, 22, '2026-08-12', '10:00', 'Fiebre persistente',       3, 'cancelado'),
-(24, 7,  2, 5, 1, 7,  '2026-08-19', '09:00', 'Control de rodilla',       1, 'atendido'),
-(25, 8,  4, 2, 2, 15, '2026-08-19', '15:30', 'Chequeo general',          1, 'atendido'),
-(26, 9,  4, 1, 2, 16, '2026-08-26', '09:30', 'Holter 24 horas',          2, 'atendido'),
-(27, 11, 4, 1, 2, 16, '2026-08-26', '11:00', 'Control cardiologico',     4, 'cancelado'),
-(28, 7,  5, 4, 3, 23, '2026-08-26', '08:30', 'Control anual',            1, 'atendido'),
-(29, 7,  2, 5, 1, 8,  '2026-09-09', '08:30', 'Control de rodilla',       1, 'confirmado'),
-(30, 8,  2, 5, 1, 8,  '2026-09-09', '10:00', 'Dolor de espalda',         1, 'confirmado'),
-(31, 9,  4, 1, 2, 17, '2026-09-09', '09:30', 'Control cardiologico',     2, 'confirmado'),
-(32, 10, 2, 2, 1, 9,  '2026-09-16', '14:30', 'Chequeo general',          3, 'confirmado'),
-(33, 11, 4, 2, 2, 18, '2026-09-16', '15:30', 'Analisis de rutina',       4, 'confirmado'),
-(34, 7,  5, 4, 3, 24, '2026-09-23', '08:30', 'Control pediatrico',       1, 'confirmado'),
-(35, 8,  2, 5, 1, 10, '2026-09-23', '09:00', 'Rehabilitacion',           1, 'cancelado');
+(1,  7,  2, 5, 1, 9,  @hoy - INTERVAL 30 DAY, '08:30', 'Dolor de rodilla',        1, 'atendido'),
+(2,  8,  2, 5, 1, 9,  @hoy - INTERVAL 30 DAY, '09:30', 'Esguince de tobillo',     1, 'atendido'),
+(3,  9,  2, 5, 1, 9,  @hoy - INTERVAL 30 DAY, '10:30', 'Control de yeso',         2, 'cancelado'),
+(4,  10, 2, 2, 1, 10, @hoy - INTERVAL 45 DAY, '14:30', 'Chequeo general',         3, 'atendido'),
+(5,  11, 2, 2, 1, 10, @hoy - INTERVAL 45 DAY, '15:30', 'Control de presion',      4, 'atendido'),
+(6,  9,  4, 1, 2, 17, @hoy - INTERVAL 35 DAY, '09:30', 'Electrocardiograma',      2, 'atendido'),
+(7,  10, 4, 1, 2, 17, @hoy - INTERVAL 35 DAY, '11:00', 'Control cardiologico',    3, 'cancelado'),
+(8,  7,  5, 3, 3, 22, @hoy - INTERVAL 28 DAY, '14:30', 'Control de lunares',      1, 'atendido'),
+(9,  11, 4, 2, 2, 16, @hoy - INTERVAL 21 DAY, '15:30', 'Chequeo anual',           4, 'atendido'),
+(10, 8,  2, 2, 2, 8,  @hoy - INTERVAL 14 DAY, '14:30', 'Analisis de sangre',      1, 'atendido'),
+(11, 9,  2, 2, 2, 8,  @hoy - INTERVAL 14 DAY, '16:00', 'Control clinico',         2, 'cancelado'),
+(12, 11, 5, 4, 3, 21, @hoy - INTERVAL 10 DAY, '08:30', 'Control de crecimiento',  4, 'atendido'),
+(13, 10, 5, 4, 3, 21, @hoy - INTERVAL 10 DAY, '10:00', 'Fiebre persistente',      3, 'cancelado'),
+(14, 7,  2, 5, 1, 7,  @hoy - INTERVAL 7 DAY,  '09:00', 'Control de rodilla',      1, 'atendido'),
+(15, 9,  4, 1, 2, 15, @hoy - INTERVAL 7 DAY,  '10:30', 'Control de arritmia',     2, 'atendido'),
+(16, 7,  2, 5, 1, 1,  @hoy,                   '09:00', 'Control post operatorio', 1, 'confirmado'),
+(17, 8,  2, 5, 1, 1,  @hoy,                   '10:30', 'Dolor lumbar',            1, 'confirmado'),
+(18, 11, 2, 2, 2, 2,  @hoy,                   '15:00', 'Chequeo general',         4, 'confirmado'),
+(19, 9,  4, 1, 2, 11, @hoy,                   '10:00', 'Control cardiologico',    2, 'confirmado'),
+(20, 10, 5, 4, 3, 18, @hoy,                   '09:30', 'Control pediatrico',      3, 'confirmado'),
+(21, 7,  5, 4, 3, 18, @hoy,                   '11:00', 'Vacunacion',              1, 'cancelado'),
+(22, 7,  2, 5, 1, 3,  @hoy + INTERVAL 1 DAY,  '08:30', 'Control de rodilla',      1, 'confirmado'),
+(23, 10, 4, 1, 2, 12, @hoy + INTERVAL 1 DAY,  '09:30', 'Holter 24 horas',         3, 'confirmado'),
+(24, 9,  2, 2, 2, 4,  @hoy + INTERVAL 2 DAY,  '14:30', 'Analisis de rutina',      2, 'confirmado'),
+(25, 11, 5, 3, 3, 19, @hoy + INTERVAL 2 DAY,  '15:00', 'Consulta dermatologica',  4, 'confirmado'),
+(26, 7,  4, 2, 2, 13, @hoy + INTERVAL 3 DAY,  '16:00', 'Chequeo anual',           1, 'confirmado'),
+(27, 8,  2, 5, 1, 5,  @hoy + INTERVAL 7 DAY,  '09:00', 'Rehabilitacion',          1, 'confirmado');
 
+-- Cada turno atendido tiene su registro de historial clinico.
 INSERT INTO `historial_clinico` (`id`, `id_turno`, `id_medico`, `id_paciente`, `diagnostico`, `tratamiento`, `observaciones`, `fecha`) VALUES
-(1, 1,  2, 7, 'Esguince de tobillo grado I',      'Reposo y antiinflamatorios',   'Control en 15 dias',            '2026-06-10 09:00:00'),
-(2, 6,  4, 9, 'Arritmia sinusal leve',            'Control periodico',            'Repetir ECG en 3 meses',        '2026-06-24 10:15:00'),
-(3, 9,  2, 7, 'Evolucion favorable de fractura',  'Retiro de yeso',               'Iniciar kinesiologia',          '2026-07-08 09:10:00'),
-(4, 14, 5, 8, 'Paciente sano',                    'Vacunacion al dia',            'Proximo control en 6 meses',    '2026-07-15 09:30:00'),
-(5, 18, 2, 7, 'Rehabilitacion en curso',          'Kinesiologia 2 veces por semana', 'Buena movilidad articular',  '2026-08-05 09:05:00');
+(1,  1,  2, 7,  'Esguince de rodilla grado I', 'Reposo y antiinflamatorios',      'Control en 15 dias',               TIMESTAMP(@hoy - INTERVAL 30 DAY, '09:00:00')),
+(2,  2,  2, 8,  'Esguince de tobillo leve',    'Vendaje y hielo',                 'Evitar deportes por 2 semanas',    TIMESTAMP(@hoy - INTERVAL 30 DAY, '10:00:00')),
+(3,  4,  2, 10, 'Paciente sano',               'Sin tratamiento',                 'Control anual',                    TIMESTAMP(@hoy - INTERVAL 45 DAY, '15:00:00')),
+(4,  5,  2, 11, 'Hipertension leve',           'Dieta hiposodica',                'Controlar la presion cada semana', TIMESTAMP(@hoy - INTERVAL 45 DAY, '16:00:00')),
+(5,  6,  4, 9,  'Arritmia sinusal leve',       'Control periodico',               'Repetir ECG en 3 meses',           TIMESTAMP(@hoy - INTERVAL 35 DAY, '10:00:00')),
+(6,  8,  5, 7,  'Nevos benignos',              'Proteccion solar diaria',         'Control anual de lunares',         TIMESTAMP(@hoy - INTERVAL 28 DAY, '15:00:00')),
+(7,  9,  4, 11, 'Chequeo sin hallazgos',       'Actividad fisica regular',        'Proximo control en 12 meses',      TIMESTAMP(@hoy - INTERVAL 21 DAY, '16:00:00')),
+(8,  10, 2, 8,  'Anemia leve',                 'Suplemento de hierro',            'Repetir analisis en 2 meses',      TIMESTAMP(@hoy - INTERVAL 14 DAY, '15:00:00')),
+(9,  12, 5, 11, 'Crecimiento normal',          'Alimentacion balanceada',         'Proximo control en 6 meses',       TIMESTAMP(@hoy - INTERVAL 10 DAY, '09:00:00')),
+(10, 14, 2, 7,  'Evolucion favorable',         'Kinesiologia 2 veces por semana', 'Buena movilidad articular',        TIMESTAMP(@hoy - INTERVAL 7 DAY,  '09:30:00')),
+(11, 15, 4, 9,  'Arritmia controlada',         'Continuar con la medicacion',     'Control en 6 meses',               TIMESTAMP(@hoy - INTERVAL 7 DAY,  '11:00:00'));
 
 INSERT INTO `notificacion` (`id`, `id_usuario`, `tipo`, `mensaje`, `leida`, `fecha`) VALUES
-(1, 7, 'turno_confirmado', 'Tu turno fue confirmado para el 2026-09-09 a las 08:30 con Ana Lopez.',   0, '2026-08-20 09:00:00'),
-(2, 8, 'turno_confirmado', 'Tu turno fue confirmado para el 2026-09-09 a las 10:00 con Ana Lopez.',   0, '2026-08-20 09:05:00'),
-(3, 8, 'turno_cancelado',  'Tu turno del 2026-09-23 a las 09:00 fue cancelado.',                      0, '2026-08-28 11:00:00'),
-(4, 7, 'turno_atendido',   'Tu turno del 2026-08-19 a las 09:00 fue marcado como atendido.',          1, '2026-08-19 09:40:00');
+(1, 7, 'turno_atendido',   CONCAT('Tu turno del ', DATE_FORMAT(@hoy - INTERVAL 7 DAY, '%d/%m/%Y'), ' a las 09:00 fue marcado como atendido.'), 1, TIMESTAMP(@hoy - INTERVAL 7 DAY, '09:40:00')),
+(2, 7, 'turno_confirmado', CONCAT('Tu turno fue confirmado para el ', DATE_FORMAT(@hoy, '%d/%m/%Y'), ' a las 09:00 con Ana Lopez.'), 1, TIMESTAMP(@hoy - INTERVAL 5 DAY, '10:00:00')),
+(3, 2, 'turno_confirmado', CONCAT('Nuevo turno con Franco Friggeri el ', DATE_FORMAT(@hoy, '%d/%m/%Y'), ' a las 09:00 en Sede Centro.'), 0, TIMESTAMP(@hoy - INTERVAL 5 DAY, '10:00:00')),
+(4, 7, 'turno_confirmado', CONCAT('Tu turno fue confirmado para el ', DATE_FORMAT(@hoy + INTERVAL 1 DAY, '%d/%m/%Y'), ' a las 08:30 con Ana Lopez.'), 0, TIMESTAMP(@hoy - INTERVAL 3 DAY, '12:00:00')),
+(5, 2, 'turno_confirmado', CONCAT('Nuevo turno con Franco Friggeri el ', DATE_FORMAT(@hoy + INTERVAL 1 DAY, '%d/%m/%Y'), ' a las 08:30 en Sede Centro.'), 0, TIMESTAMP(@hoy - INTERVAL 3 DAY, '12:00:00')),
+(6, 8, 'turno_confirmado', CONCAT('Tu turno fue confirmado para el ', DATE_FORMAT(@hoy + INTERVAL 7 DAY, '%d/%m/%Y'), ' a las 09:00 con Ana Lopez.'), 0, TIMESTAMP(@hoy - INTERVAL 2 DAY, '09:15:00')),
+(7, 7, 'turno_cancelado',  CONCAT('Tu turno del ', DATE_FORMAT(@hoy, '%d/%m/%Y'), ' a las 11:00 fue cancelado.'), 0, TIMESTAMP(@hoy - INTERVAL 1 DAY, '18:00:00')),
+(8, 5, 'turno_cancelado',  CONCAT('El turno de Franco Friggeri del ', DATE_FORMAT(@hoy, '%d/%m/%Y'), ' a las 11:00 fue cancelado.'), 0, TIMESTAMP(@hoy - INTERVAL 1 DAY, '18:00:00'));
+
+INSERT INTO `log_auditoria` (`id`, `id_usuario`, `accion`, `entidad`, `id_entidad`, `detalle`, `fecha`) VALUES
+(1, 1, 'ALTA',         'sede',         3,  'ALTA sobre sede #3 | {"nombre":"Sede Sur","direccion":"Belgrano 789","telefono":"3424000003"}', TIMESTAMP(@hoy - INTERVAL 60 DAY, '10:00:00')),
+(2, 1, 'ALTA',         'cobertura',    4,  'ALTA sobre cobertura #4 | {"nombre":"Particular"}', TIMESTAMP(@hoy - INTERVAL 60 DAY, '10:05:00')),
+(3, 1, 'ALTA',         'especialidad', 3,  'ALTA sobre especialidad #3 | {"descripcion":"Dermatologia"}', TIMESTAMP(@hoy - INTERVAL 60 DAY, '10:10:00')),
+(4, 1, 'ALTA',         'usuario',      5,  'ALTA sobre usuario #5 | {"nombre":"Valeria","apellido":"Sosa","dni":"10000005","email":"vsosa@clinica.com","rol":"medico","id_sede":3,"especialidades":[4]}', TIMESTAMP(@hoy - INTERVAL 59 DAY, '11:00:00')),
+(5, 7, 'ALTA',         'usuario',      7,  'ALTA sobre usuario #7 | {"nombre":"Franco","apellido":"Friggeri","dni":"36000960","email":"ffriggeri@gmail.com","id_cobertura":1}', TIMESTAMP(@hoy - INTERVAL 50 DAY, '18:30:00')),
+(6, 1, 'MODIFICACION', 'usuario',      5,  'MODIFICACION sobre usuario #5 | {"nombre":"Valeria","apellido":"Sosa","rol":"medico","id_sede":3,"especialidades":[4,3]}', TIMESTAMP(@hoy - INTERVAL 30 DAY, '12:00:00')),
+(7, 3, 'ALTA',         'usuario',      11, 'ALTA sobre usuario #11 | {"nombre":"Sofia","apellido":"Nunez","dni":"43444555","email":"snunez@gmail.com","id_cobertura":4}', TIMESTAMP(@hoy - INTERVAL 20 DAY, '09:45:00'));

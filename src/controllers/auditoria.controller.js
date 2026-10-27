@@ -23,7 +23,7 @@ const SELECT_LOG_DETALLE = `
 
 async function listarLogs(req, res) {
   try {
-    const { id_usuario, entidad, accion, desde, hasta } = req.query;
+    const { id_usuario, usuario, entidad, accion, desde, hasta } = req.query;
 
     const rango = validarRangoFechas(desde, hasta);
     if (rango.error) {
@@ -45,6 +45,12 @@ async function listarLogs(req, res) {
     if (id_usuario) {
       condiciones.push("l.id_usuario = ?");
       parametros.push(id_usuario);
+    }
+
+    // Busqueda libre por nombre y apellido de quien hizo la accion.
+    if (usuario) {
+      condiciones.push("CONCAT(u.nombre, ' ', u.apellido) LIKE CONCAT('%', ?, '%')");
+      parametros.push(String(usuario).trim());
     }
 
     if (entidad) {
@@ -75,7 +81,10 @@ async function listarLogs(req, res) {
     const offset = Math.max(Number(req.query.offset) || 0, 0);
 
     const [totales] = await pool.query(
-      `SELECT COUNT(*) AS total FROM log_auditoria l ${where}`,
+      `SELECT COUNT(*) AS total
+       FROM log_auditoria l
+       LEFT JOIN usuario u ON u.id = l.id_usuario
+       ${where}`,
       parametros
     );
 
@@ -87,6 +96,7 @@ async function listarLogs(req, res) {
     return enviarRespuesta(res, 200, "ok", {
       filtros: {
         id_usuario: id_usuario || null,
+        usuario: usuario || null,
         entidad: entidad || null,
         accion: accionNormalizada,
         desde: rango.desde,

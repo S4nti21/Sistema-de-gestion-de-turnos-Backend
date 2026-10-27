@@ -8,6 +8,9 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
+  // Las columnas DATE son fechas de calendario: se devuelven como 'YYYY-MM-DD'
+  // para que no se corran de dia por la zona horaria al pasar por JSON.
+  dateStrings: ["DATE"],
 });
 
 module.exports = pool;

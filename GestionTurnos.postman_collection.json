@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "GestionTurnos - Backend (semanas 1 a 4)",
-    "description": "# Sistema de Gestion de Turnos Medicos — API\n\nBackend del TP Integrador de Programacion 2. Node.js + Express 4 + MySQL (`mysql2`), sin ORM.\n\nEsta coleccion documenta **todos los endpoints de las cuatro semanas**. Cada pedido incluye metodo, ruta, parametros, body esperado, respuestas posibles y el rol que puede acceder.\n\n---\n\n## Como levantar el proyecto\n\n```bash\nnpm install\n# crear la base y cargar los datos de prueba:\n#   phpMyAdmin -> Importar -> database/clinica.sql\n#   o:  mysql -u root -p < database/clinica.sql\ncp .env.example .env      # y completar las credenciales\nnpm run dev\n```\n\nLa API queda en `http://localhost:3000`. Para comprobarlo: **Semana 1 › Health check**.\n\n---\n\n## Formato de respuesta\n\n**Todos** los endpoints responden con la misma estructura:\n\n```json\n{ \"codigo\": 200, \"estado\": \"ok\", \"datos\": { } }\n```\n\n| campo | significado |\n|---|---|\n| `codigo` | codigo HTTP numerico, el mismo que trae la respuesta |\n| `estado` | `\"ok\"` si salio bien; si no, el mensaje de error en texto |\n| `datos` | el contenido de la respuesta, o `null` si no corresponde |\n\nEjemplo de error:\n\n```json\n{ \"codigo\": 403, \"estado\": \"No tenés permisos para acceder a este recurso\", \"datos\": null }\n```\n\n---\n\n## Autenticacion\n\nJWT enviado como `Authorization: Bearer <token>`. El payload del token trae `id`, `rol` e `id_sede`.\n\nPara obtener un token, usá cualquiera de los pedidos de **login**: un script de test guarda el token en la variable `{{token}}` y todos los pedidos siguientes lo toman de ahi. Cada login sobreescribe `{{token}}`, asi que **corré el login del rol que vas a probar antes de entrar a cada carpeta**.\n\n| codigo | cuando aparece |\n|---|---|\n| `401` | falta el token, o es invalido / esta vencido |\n| `403` | el token es valido pero el rol no tiene permiso |\n\n---\n\n## Roles\n\n| rol | que puede hacer |\n|---|---|\n| `paciente` | reservar y cancelar sus turnos, ver su historial y sus notificaciones |\n| `medico` | gestionar su agenda, atender sus turnos, cargar historial clinico |\n| `operador` | gestionar agenda y turnos de **su sede** |\n| `administrador` | ABM de usuarios, sedes, especialidades y coberturas; auditoria y reportes |\n\n---\n\n## Usuarios de prueba\n\nTodos con la password `Password123!`.\n\n| DNI | rol | nombre | sede |\n|---|---|---|---|\n| `10000001` | administrador | Marcos Gomez | — |\n| `10000002` | medico | Ana Lopez | Sede Centro |\n| `10000003` | operador | Juan Perez | Sede Centro |\n| `10000004` | medico | Diego Ramirez | Sede Norte |\n| `10000005` | medico | Valeria Sosa | Sede Sur |\n| `36000960` | paciente | Franco Friggeri | — |\n\n---\n\n## Orden sugerido\n\nLas carpetas estan pensadas para correrse **en orden**, porque algunas dependen de ids que guardan las anteriores (`{{id_sede_creada}}`, `{{id_agenda_creada}}`, `{{turno_atender}}`, …).\n\nSi algo devuelve 404 o 409 de forma inesperada, volve a correr `database/clinica.sql` para dejar la base en su estado inicial y empezá de nuevo.\n\nLos pedidos cuyo nombre dice **\"(debe dar 4xx)\"** son casos negativos: se espera que fallen, y estan ahi para documentar el manejo de errores.\n\n---\n\n## Novedades de la semana 4\n\n- **`GET /auditoria`** — consulta del log de acciones sensibles, con filtros por usuario, entidad, accion y rango de fechas.\n- **`GET /reportes/*`** — cuatro indicadores agregados, todos filtrables por rango de fechas.\n- **`/usuarios`** — ABM completo de usuarios, unica via por API para crear medicos, operadores y administradores.\n\nLa auditoria se escribe sola: el middleware `auditar(entidad)` envuelve las rutas de usuarios, coberturas, especialidades y sedes, y registra cada alta, baja y modificacion exitosa sin una sola linea de codigo en los controladores.",
+    "name": "GestionTurnos - Backend (semanas 1 a 4 + entrega frontend)",
+    "description": "# Sistema de Gestion de Turnos Medicos — API\n\nBackend del TP Integrador de Programacion 2. Node.js + Express 4 + MySQL (`mysql2`), sin ORM.\n\nEsta coleccion documenta **todos los endpoints de las cuatro semanas**. Cada pedido incluye metodo, ruta, parametros, body esperado, respuestas posibles y el rol que puede acceder.\n\n---\n\n## Como levantar el proyecto\n\n```bash\nnpm install\n# crear la base y cargar los datos de prueba:\n#   phpMyAdmin -> Importar -> database/clinica.sql\n#   o:  mysql -u root -p < database/clinica.sql\ncp .env.example .env      # y completar las credenciales\nnpm run dev\n```\n\nLa API queda en `http://localhost:3000`. Para comprobarlo: **Semana 1 › Health check**.\n\n---\n\n## Formato de respuesta\n\n**Todos** los endpoints responden con la misma estructura:\n\n```json\n{ \"codigo\": 200, \"estado\": \"ok\", \"datos\": { } }\n```\n\n| campo | significado |\n|---|---|\n| `codigo` | codigo HTTP numerico, el mismo que trae la respuesta |\n| `estado` | `\"ok\"` si salio bien; si no, el mensaje de error en texto |\n| `datos` | el contenido de la respuesta, o `null` si no corresponde |\n\nEjemplo de error:\n\n```json\n{ \"codigo\": 403, \"estado\": \"No tenés permisos para acceder a este recurso\", \"datos\": null }\n```\n\n---\n\n## Autenticacion\n\nJWT enviado como `Authorization: Bearer <token>`. El payload del token trae `id`, `rol` e `id_sede`.\n\nPara obtener un token, usá cualquiera de los pedidos de **login**: un script de test guarda el token en la variable `{{token}}` y todos los pedidos siguientes lo toman de ahi. Cada login sobreescribe `{{token}}`, asi que **corré el login del rol que vas a probar antes de entrar a cada carpeta**.\n\n| codigo | cuando aparece |\n|---|---|\n| `401` | falta el token, o es invalido / esta vencido |\n| `403` | el token es valido pero el rol no tiene permiso |\n\n---\n\n## Roles\n\n| rol | que puede hacer |\n|---|---|\n| `paciente` | reservar y cancelar sus turnos, ver su historial y sus notificaciones |\n| `medico` | gestionar su agenda, atender sus turnos, cargar historial clinico |\n| `operador` | gestionar agenda y turnos de **su sede** |\n| `administrador` | ABM de usuarios, sedes, especialidades y coberturas; auditoria y reportes |\n\n---\n\n## Usuarios de prueba\n\nTodos con la password `Password123!`.\n\n| DNI | rol | nombre | sede |\n|---|---|---|---|\n| `10000001` | administrador | Marcos Gomez | — |\n| `10000002` | medico | Ana Lopez | Sede Centro |\n| `10000003` | operador | Juan Perez | Sede Centro |\n| `10000004` | medico | Diego Ramirez | Sede Norte |\n| `10000005` | medico | Valeria Sosa | Sede Sur |\n| `10000006` | operador | Carla Diaz | Sede Norte |\n| `36000960` | paciente | Franco Friggeri | — |\n| `41222333` | paciente | Lucia Molina | — |\n\n---\n\n## Orden sugerido\n\nLas carpetas estan pensadas para correrse **en orden**, porque algunas dependen de ids que guardan las anteriores (`{{id_sede_creada}}`, `{{id_agenda_creada}}`, `{{turno_atender}}`, …).\n\nSi algo devuelve 404 o 409 de forma inesperada, volve a correr `database/clinica.sql` para dejar la base en su estado inicial y empezá de nuevo.\n\nLos pedidos cuyo nombre dice **\"(debe dar 4xx)\"** son casos negativos: se espera que fallen, y estan ahi para documentar el manejo de errores.\n\n---\n\n## Novedades de la semana 4\n\n- **`GET /auditoria`** — consulta del log de acciones sensibles, con filtros por usuario, entidad, accion y rango de fechas.\n- **`GET /reportes/*`** — cuatro indicadores agregados, todos filtrables por rango de fechas.\n- **`/usuarios`** — ABM completo de usuarios, unica via por API para crear medicos, operadores y administradores.\n\nLa auditoria se escribe sola: el middleware `auditar(entidad)` envuelve las rutas de usuarios, coberturas, especialidades y sedes, y registra cada alta, baja y modificacion exitosa sin una sola linea de codigo en los controladores.\n\n---\n\n## Cambios para la entrega del frontend\n\n- **Fechas de prueba relativas:** `database/clinica.sql` arma la agenda, los turnos, el historial y las notificaciones a partir del día en que se importa (`CURDATE()`). Ana Lopez atiende hoy en Sede Centro (mañana) y Sede Norte (tarde). La colección también calcula sus fechas en un script *pre-request*.\n- **Fechas como texto:** las columnas `DATE` se devuelven como `YYYY-MM-DD` (`dateStrings` en el pool de `mysql2`); los mensajes de notificación usan `dd/mm/aaaa`.\n- **`GET /sedes` y `GET /especialidades`** pasan a estar disponibles para cualquier usuario con sesión.\n- **Nuevos:** `GET /medicos`, `GET /medicos/:id`, `GET /disponibilidad/fechas`, `GET /disponibilidad/horarios`, `GET /pacientes`, `POST /pacientes` (operador) y `PUT /pacientes/mis-datos` (paciente).\n- **Agenda:** validaciones de formato, fecha no pasada, salida posterior a la entrada, especialidad del médico, superposición, sede del operador (403) y turnos confirmados al modificar o eliminar (409). El listado trae los nombres.\n- **Turnos:** grilla de 30 minutos, `id_agenda` guardado, notificación también al médico, el médico opera en cualquier sede donde atiende y `PATCH /turnos/:id/atender` acepta el historial clínico en la misma transacción.\n- **Usuarios:** listado paginado (`{ total, limite, offset, items }`) con filtros por nombre y apellido, y especialidades del médico en el alta y la modificación.\n- **Auditoria:** filtro `usuario` por nombre y apellido.\n\nTodo esto se prueba en la carpeta **\"Entrega frontend - Cambios del backend\"**.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -72,17 +72,17 @@
     },
     {
       "key": "fecha_agenda",
-      "value": "2026-10-15",
+      "value": "",
       "type": "string"
     },
     {
       "key": "desde",
-      "value": "2026-06-01",
+      "value": "",
       "type": "string"
     },
     {
       "key": "hasta",
-      "value": "2026-08-31",
+      "value": "",
       "type": "string"
     },
     {
@@ -127,6 +127,36 @@
     },
     {
       "key": "notificacion_semana3",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fecha_agenda_descartable",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fecha_disponible",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hora_disponible",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "turno_nuevo",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_medico_creado",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fecha_agenda_hoy_mas_1",
       "value": "",
       "type": "string"
     }
@@ -534,7 +564,7 @@
                 "sedes"
               ]
             },
-            "description": "**`GET /sedes`**\n\nDevuelve todas las sedes ordenadas por nombre.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, nombre, direccion, telefono }`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+            "description": "**`GET /sedes`**\n\nDevuelve todas las sedes ordenadas por nombre.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, nombre, direccion, telefono }`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** el listado pasa a estar disponible para **cualquier usuario con sesión** (el paciente lo usa al pedir turno). Alta, modificación y baja siguen siendo del administrador."
           }
         },
         {
@@ -616,7 +646,7 @@
                 "{{id_sede_creada}}"
               ]
             },
-            "description": "**`DELETE /sedes/{{id_sede_creada}}`**\n\nBorra la sede creada al inicio de la carpeta, que no tiene dependencias.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la sede |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` de la sede borrada\n- `409` — la sede tiene dependencias\n- `404` — la sede indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `BAJA` sobre `sede`."
+            "description": "**`DELETE /sedes/{{id_sede_creada}}`**\n\nBorra la sede creada al inicio de la carpeta, que no tiene dependencias.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la sede |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` de la sede borrada\n- `409` — la sede tiene dependencias\n- `404` — la sede indicada no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `BAJA` sobre `sede`.\n\n**Cambios para el frontend:** además de médicos, operadores y agenda, ahora se controla que la sede no tenga turnos asociados (antes ese caso terminaba en un 500 por la clave foránea)."
           }
         },
         {
@@ -728,7 +758,7 @@
                 "especialidades"
               ]
             },
-            "description": "**`GET /especialidades`**\n\nDevuelve todas las especialidades ordenadas por descripcion.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, descripcion }`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+            "description": "**`GET /especialidades`**\n\nDevuelve todas las especialidades ordenadas por descripcion.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, descripcion }`\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** el listado pasa a estar disponible para **cualquier usuario con sesión**. Alta, modificación y baja siguen siendo del administrador."
           }
         },
         {
@@ -1014,7 +1044,7 @@
                 "agenda"
               ]
             },
-            "description": "**`POST /agenda`**\n\nCrea una franja de disponibilidad. Guarda el id en `{{id_agenda_creada}}`. `id_medico` 2 es Ana Lopez (sede 1, Traumatologia).\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si | formato `HH:MM` |\n| `hora_salida` | string | si | formato `HH:MM`, posterior a la entrada |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `id_medico` | int | si | usuario con rol `medico` |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `201` — agenda creada\n- `400` — faltan datos obligatorios o las horas son invalidas\n- `403` — un medico intenta crear agenda para otro medico, o para otra sede\n- `404` — el medico, la especialidad o la sede no existen\n- `409` — se superpone con otra franja del mismo medico\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor",
+            "description": "**`POST /agenda`**\n\nCrea una franja de disponibilidad. Guarda el id en `{{id_agenda_creada}}`. `id_medico` 2 es Ana Lopez (sede 1, Traumatologia).\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si | formato `HH:MM` |\n| `hora_salida` | string | si | formato `HH:MM`, posterior a la entrada |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `id_medico` | int | si | usuario con rol `medico` |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `201` — agenda creada\n- `400` — faltan datos obligatorios o las horas son invalidas\n- `403` — un medico intenta crear agenda para otro medico, o para otra sede\n- `404` — el medico, la especialidad o la sede no existen\n- `409` — se superpone con otra franja del mismo medico\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** se valida que la fecha no sea pasada, el formato `HH:MM` de las horas, que la salida sea posterior a la entrada (400), que la especialidad sea una de las del médico (400), que el operador cargue solo en su sede (403) y que el rango no se superponga con otro del mismo médico ese día en ninguna sede (409). La respuesta incluye `medico_nombre`, `medico_apellido`, `especialidad_descripcion` y `sede_nombre`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"hora_entrada\": \"08:00\",\n  \"hora_salida\": \"12:00\",\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"id_medico\": 2,\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
@@ -1076,7 +1106,7 @@
                 }
               ]
             },
-            "description": "**`GET /agenda`**\n\nLista las franjas de agenda. Los tres filtros son opcionales y se combinan entre si.\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de franjas de agenda\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso\n- `500` — error interno del servidor"
+            "description": "**`GET /agenda`**\n\nLista las franjas de agenda. Los tres filtros son opcionales y se combinan entre si.\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de franjas de agenda\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** cada franja trae además `medico_nombre`, `medico_apellido`, `especialidad_descripcion` y `sede_nombre`. Las fechas se devuelven como `YYYY-MM-DD`."
           }
         },
         {
@@ -1103,7 +1133,7 @@
                 "{{id_agenda_creada}}"
               ]
             },
-            "description": "**`PUT /agenda/{{id_agenda_creada}}`**\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si | `HH:MM` |\n| `hora_salida` | string | si | `HH:MM` |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `200` — agenda actualizada\n- `400` — faltan datos obligatorios\n- `403` — es la agenda de otro medico o de otra sede\n- `404` — la agenda indicada no existe\n- `409` — se superpone con otra franja\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor",
+            "description": "**`PUT /agenda/{{id_agenda_creada}}`**\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si | `HH:MM` |\n| `hora_salida` | string | si | `HH:MM` |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `200` — agenda actualizada\n- `400` — faltan datos obligatorios\n- `403` — es la agenda de otro medico o de otra sede\n- `404` — la agenda indicada no existe\n- `409` — se superpone con otra franja\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** mismas validaciones que el alta. Un rango de fecha pasada no se modifica (409). Si tiene turnos confirmados no se le puede cambiar la fecha, la sede ni la especialidad, y ningún turno confirmado puede quedar fuera del nuevo horario (409, indicando las horas afectadas). El operador solo modifica rangos de su sede (403).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"hora_entrada\": \"08:00\",\n  \"hora_salida\": \"13:00\",\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
@@ -1135,7 +1165,7 @@
                 "1"
               ]
             },
-            "description": "**`DELETE /agenda/1`**\n\nCaso negativo sobre la agenda semilla 1 (Ana Lopez, 10/06/2026), que tiene turnos asociados. El controlador chequea `turno.id_agenda` antes de borrar.\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `409` — no se puede eliminar la agenda: tiene turnos asociados\n- `403` — es la agenda de otro medico\n- `404` — la agenda indicada no existe"
+            "description": "**`DELETE /agenda/1`**\n\nCaso negativo sobre la agenda semilla 1 (Ana Lopez, 10/06/2026), que tiene turnos asociados. El controlador chequea `turno.id_agenda` antes de borrar.\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `409` — no se puede eliminar la agenda: tiene turnos asociados\n- `403` — es la agenda de otro medico\n- `404` — la agenda indicada no existe\n\n**Cambios para el frontend:** con la base de prueba actual, la agenda 1 es la de Ana Lopez de hoy en Sede Centro, con turnos confirmados: la respuesta es `409 — No se puede eliminar el rango horario: tiene N turnos confirmados`. Si la fecha ya pasó, el 409 es porque los rangos pasados no se eliminan."
           }
         },
         {
@@ -1164,7 +1194,7 @@
             "description": "**`POST /agenda`**\n\nSegunda franja, en otra fecha, creada solo para poder probar el borrado sin tocar la agenda que usan los turnos de la semana 3.\n\n**Rol requerido:** `medico`, `operador` o `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `hora_entrada` | string | si | `HH:MM` |\n| `hora_salida` | string | si | `HH:MM` |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `id_medico` | int | si |  |\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n\n**Respuestas**\n\n- `201` — agenda creada\n- `400` — faltan datos obligatorios\n- `409` — se superpone con otra franja del mismo medico\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"hora_entrada\": \"14:00\",\n  \"hora_salida\": \"18:00\",\n  \"fecha\": \"2026-10-16\",\n  \"id_medico\": 2,\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
+              "raw": "{\n  \"hora_entrada\": \"14:00\",\n  \"hora_salida\": \"18:00\",\n  \"fecha\": \"{{fecha_agenda_descartable}}\",\n  \"id_medico\": 2,\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1207,7 +1237,7 @@
                 "{{id_agenda_descartable}}"
               ]
             },
-            "description": "**`DELETE /agenda/{{id_agenda_descartable}}`**\n\nBorra la franja descartable, que no tiene turnos asociados.\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` de la agenda borrada\n- `403` — es la agenda de otro medico o de otra sede\n- `404` — la agenda indicada no existe\n- `409` — la agenda tiene turnos asociados\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n> La franja creada al principio de la carpeta (`{{id_agenda_creada}}`) se deja viva a proposito: los turnos de la semana 3 la necesitan."
+            "description": "**`DELETE /agenda/{{id_agenda_descartable}}`**\n\nBorra la franja descartable, que no tiene turnos asociados.\n\n**Rol requerido:** `medico` (solo la propia), `operador` o `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id de la franja de agenda |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { id }` de la agenda borrada\n- `403` — es la agenda de otro medico o de otra sede\n- `404` — la agenda indicada no existe\n- `409` — la agenda tiene turnos asociados\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n> La franja creada al principio de la carpeta (`{{id_agenda_creada}}`) se deja viva a proposito: los turnos de la semana 3 la necesitan.\n\n**Cambios para el frontend:** solo bloquean la baja los turnos **confirmados** dentro del rango (409). Los cancelados se desvinculan del rango (`id_agenda = NULL`) y la baja se hace en una transacción. El operador solo elimina rangos de su sede (403) y los rangos de fechas pasadas no se eliminan (409)."
           }
         },
         {
@@ -1344,7 +1374,7 @@
                 "turnos"
               ]
             },
-            "description": "**`POST /turnos`**\n\nCaso negativo: la hora 14:00 cae fuera de la franja 08:00-12:00 creada en la semana 2, asi que no hay agenda que la cubra.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n| `id_medico` | int | si |  |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `hora` | string | si | `HH:MM` |\n| `nota` | string | si | motivo de la consulta, hasta 40 caracteres |\n| `id_paciente` | int | no | solo lo manda el operador; el paciente lo toma de su token |\n\n**Respuestas**\n\n- `409` — el horario solicitado no esta disponible en la agenda del medico",
+            "description": "**`POST /turnos`**\n\nCaso negativo: la hora 14:00 cae fuera de la franja 08:00-12:00 creada en la semana 2, asi que no hay agenda que la cubra.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n| `id_medico` | int | si |  |\n| `fecha` | date | si | `YYYY-MM-DD` |\n| `hora` | string | si | `HH:MM` |\n| `nota` | string | si | motivo de la consulta, hasta 40 caracteres |\n| `id_paciente` | int | no | solo lo manda el operador; el paciente lo toma de su token |\n\n**Respuestas**\n\n- `409` — el horario solicitado no esta disponible en la agenda del medico\n\n**Cambios para el frontend:** la hora tiene que ser uno de los horarios de la grilla del rango (turnos de 30 minutos desde la hora de entrada).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\",\n  \"id_medico\": 2,\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"hora\": \"14:00\",\n  \"nota\": \"Turno fuera de agenda\"\n}",
@@ -1379,7 +1409,7 @@
                 "turnos"
               ]
             },
-            "description": "**`POST /turnos`**\n\nAlta de turno dentro de la franja de agenda. Guarda el id en `{{turno_cancelar}}` y genera una notificacion `turno_confirmado` para el paciente.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n| `id_medico` | int | si |  |\n| `fecha` | date | si |  |\n| `hora` | string | si |  |\n| `nota` | string | si |  |\n| `id_paciente` | int | no | solo el operador |\n\n**Respuestas**\n\n- `201` — turno creado en estado `confirmado`, con los nombres de paciente, medico, especialidad y sede\n- `400` — faltan datos obligatorios\n- `403` — el operador intenta crear un turno para otra sede\n- `404` — el paciente, medico, especialidad o sede no existen\n- `409` — no hay agenda para ese horario, o el horario ya esta ocupado\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor",
+            "description": "**`POST /turnos`**\n\nAlta de turno dentro de la franja de agenda. Guarda el id en `{{turno_cancelar}}` y genera una notificacion `turno_confirmado` para el paciente.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `id_especialidad` | int | si |  |\n| `id_sede` | int | si |  |\n| `id_medico` | int | si |  |\n| `fecha` | date | si |  |\n| `hora` | string | si |  |\n| `nota` | string | si |  |\n| `id_paciente` | int | no | solo el operador |\n\n**Respuestas**\n\n- `201` — turno creado en estado `confirmado`, con los nombres de paciente, medico, especialidad y sede\n- `400` — faltan datos obligatorios\n- `403` — el operador intenta crear un turno para otra sede\n- `404` — el paciente, medico, especialidad o sede no existen\n- `409` — no hay agenda para ese horario, o el horario ya esta ocupado\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** se valida el formato de fecha y hora, que la nota tenga hasta 40 caracteres y que el horario no haya pasado (400). La hora debe ser un horario de la grilla de 30 minutos de algún rango (409). El turno guarda `id_agenda` y, además del paciente, se notifica al médico. La respuesta suma `paciente_dni`, `paciente_fecha_nacimiento` y `cobertura_nombre`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"id_especialidad\": \"{{id_especialidad}}\",\n  \"id_sede\": \"{{id_sede}}\",\n  \"id_medico\": 2,\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"hora\": \"08:00\",\n  \"nota\": \"Turno de prueba para cancelar\"\n}",
@@ -1426,7 +1456,7 @@
                 "cancelar"
               ]
             },
-            "description": "**`PATCH /turnos/{{turno_cancelar}}/cancelar`**\n\nPasa el turno a `cancelado` y notifica al paciente y al medico. Impacta de inmediato en el reporte de tasa de cancelacion.\n\n**Rol requerido:** `paciente` (propio), `operador` o `medico` (de su sede)\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del turno |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — turno actualizado, con `estado = \"cancelado\"`\n- `403` — el turno es de otro paciente o de otra sede\n- `404` — el turno indicado no existe\n- `409` — solo se pueden cancelar turnos `confirmado`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
+            "description": "**`PATCH /turnos/{{turno_cancelar}}/cancelar`**\n\nPasa el turno a `cancelado` y notifica al paciente y al medico. Impacta de inmediato en el reporte de tasa de cancelacion.\n\n**Rol requerido:** `paciente` (propio), `operador` o `medico` (de su sede)\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del turno |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — turno actualizado, con `estado = \"cancelado\"`\n- `403` — el turno es de otro paciente o de otra sede\n- `404` — el turno indicado no existe\n- `409` — solo se pueden cancelar turnos `confirmado`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** el médico puede cancelar sus propios turnos **en cualquier sede** donde atienda (antes solo en la suya). Los mensajes de las notificaciones muestran la fecha como `dd/mm/aaaa`."
           }
         },
         {
@@ -1546,7 +1576,7 @@
                 "atender"
               ]
             },
-            "description": "**`PATCH /turnos/{{turno_atender}}/atender`**\n\nPasa el turno a `atendido`. Es lo que cuenta el ranking de medicos de la semana 4.\n\n**Rol requerido:** `medico` (solo sus propios turnos)\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del turno |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — turno actualizado, con `estado = \"atendido\"`\n- `403` — el turno es de otro medico o de otra sede\n- `404` — el turno indicado no existe\n- `409` — solo se pueden atender turnos `confirmado`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
+            "description": "**`PATCH /turnos/{{turno_atender}}/atender`**\n\nPasa el turno a `atendido`. Es lo que cuenta el ranking de medicos de la semana 4.\n\n**Rol requerido:** `medico` (solo sus propios turnos)\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del turno |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — turno actualizado, con `estado = \"atendido\"`\n- `403` — el turno es de otro medico o de otra sede\n- `404` — el turno indicado no existe\n- `409` — solo se pueden atender turnos `confirmado`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** el body pasa a aceptar, opcionalmente, `diagnostico`, `tratamiento` y `observaciones`: si vienen (los tres son obligatorios en ese caso), el historial clínico se registra en la misma transacción. Sin body funciona igual que antes. El médico puede atender sus turnos en cualquier sede."
           }
         },
         {
@@ -1576,7 +1606,7 @@
                 }
               ]
             },
-            "description": "**`GET /turnos/medico`**\n\nTurnos del medico logueado para una fecha. Excluye los cancelados.\n\n**Rol requerido:** `medico`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de turnos ordenados por hora\n- `400` — falta el dato obligatorio: fecha\n- `403` — el rol del token no es `medico`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
+            "description": "**`GET /turnos/medico`**\n\nTurnos del medico logueado para una fecha. Excluye los cancelados.\n\n**Rol requerido:** `medico`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de turnos ordenados por hora\n- `400` — falta el dato obligatorio: fecha\n- `403` — el rol del token no es `medico`\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** incluye los turnos de todas las sedes donde atiende el médico, con `paciente_fecha_nacimiento` para calcular la edad."
           }
         },
         {
@@ -1767,7 +1797,7 @@
                 "7"
               ]
             },
-            "description": "**`GET /historial-clinico/paciente/7`**\n\nHistorial completo de un paciente. El id 7 es Franco Friggeri, que tiene historial en los datos semilla.\n\n**Rol requerido:** `paciente` (solo el propio) o `medico`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id_paciente` | path | id del paciente |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de registros de historial\n- `403` — un paciente intenta ver el historial de otro\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor"
+            "description": "**`GET /historial-clinico/paciente/7`**\n\nHistorial completo de un paciente. El id 7 es Franco Friggeri, que tiene historial en los datos semilla.\n\n**Rol requerido:** `paciente` (solo el propio) o `medico`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id_paciente` | path | id del paciente |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de registros de historial\n- `403` — un paciente intenta ver el historial de otro\n- `401` — sin token, o token invalido / vencido\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** cada registro trae además `especialidad_descripcion` y `sede_nombre`."
           }
         }
       ]
@@ -1815,7 +1845,7 @@
                 }
               ]
             },
-            "description": "**`GET /usuarios`**\n\nLista usuarios con filtros opcionales combinables. Nunca devuelve la columna `password`.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de usuarios ordenado por apellido y nombre\n- `400` — el `rol` enviado no es uno de los cuatro validos\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+            "description": "**`GET /usuarios`**\n\nLista usuarios con filtros opcionales combinables. Nunca devuelve la columna `password`.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de usuarios ordenado por apellido y nombre\n- `400` — el `rol` enviado no es uno de los cuatro validos\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** el listado se pagina con `limite` (por defecto 10, máximo 100) y `offset`, y suma los filtros `nombre` y `apellido` (búsqueda parcial). La respuesta pasa a ser `{ total, limite, offset, items }` y cada usuario trae `sede_nombre`."
           }
         },
         {
@@ -1838,7 +1868,7 @@
                 "2"
               ]
             },
-            "description": "**`GET /usuarios/2`**\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del usuario |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — usuario, sin la password\n- `404` — el usuario indicado no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+            "description": "**`GET /usuarios/2`**\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del usuario |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — usuario, sin la password\n- `404` — el usuario indicado no existe\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** si el usuario es médico, la respuesta incluye `especialidades: [{ id, descripcion }]`."
           }
         },
         {
@@ -1864,7 +1894,7 @@
                 "usuarios"
               ]
             },
-            "description": "**`POST /usuarios`**\n\nAlta de usuario con rol elegible. Segun el rol cambia que vinculo es obligatorio:\n\n- `medico` y `operador` -> **`id_sede` obligatorio** (`id_cobertura` se guarda en NULL)\n- `paciente` -> **`id_cobertura` obligatorio** (`id_sede` se guarda en NULL)\n- `administrador` -> ninguno de los dos\n\nGuarda el id en `{{id_usuario_creado}}`.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `apellido` | string | si |  |\n| `dni` | string | si | unico |\n| `email` | string | si | unico |\n| `password` | string | si | se hashea con bcrypt |\n| `fecha_nacimiento` | date | si | `YYYY-MM-DD` |\n| `rol` | string | si | `paciente` | `medico` | `operador` | `administrador` |\n| `telefono` | string | no |  |\n| `id_sede` | int | no | obligatorio si el rol es `medico` u `operador` |\n| `id_cobertura` | int | no | obligatorio si el rol es `paciente` |\n\n**Respuestas**\n\n- `201` — usuario creado, sin la password\n- `400` — faltan datos, el rol no es valido, o falta el vinculo que el rol exige\n- `409` — ya existe un usuario con ese DNI o email\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `ALTA` sobre `usuario` (el `detalle` guarda el body **sin** la password).",
+            "description": "**`POST /usuarios`**\n\nAlta de usuario con rol elegible. Segun el rol cambia que vinculo es obligatorio:\n\n- `medico` y `operador` -> **`id_sede` obligatorio** (`id_cobertura` se guarda en NULL)\n- `paciente` -> **`id_cobertura` obligatorio** (`id_sede` se guarda en NULL)\n- `administrador` -> ninguno de los dos\n\nGuarda el id en `{{id_usuario_creado}}`.\n\n**Rol requerido:** `administrador`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `apellido` | string | si |  |\n| `dni` | string | si | unico |\n| `email` | string | si | unico |\n| `password` | string | si | se hashea con bcrypt |\n| `fecha_nacimiento` | date | si | `YYYY-MM-DD` |\n| `rol` | string | si | `paciente` | `medico` | `operador` | `administrador` |\n| `telefono` | string | no |  |\n| `id_sede` | int | no | obligatorio si el rol es `medico` u `operador` |\n| `id_cobertura` | int | no | obligatorio si el rol es `paciente` |\n\n**Respuestas**\n\n- `201` — usuario creado, sin la password\n- `400` — faltan datos, el rol no es valido, o falta el vinculo que el rol exige\n- `409` — ya existe un usuario con ese DNI o email\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `ALTA` sobre `usuario` (el `detalle` guarda el body **sin** la password).\n\n**Cambios para el frontend:** para los médicos se puede enviar `especialidades` (array de ids, al menos una); se guardan en `medico_especialidad` en la misma transacción. Ver la carpeta \"Entrega frontend\".",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nombre\": \"Nuevo\",\n  \"apellido\": \"Medico\",\n  \"dni\": \"50000001\",\n  \"email\": \"nuevo.medico@clinica.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1990-01-01\",\n  \"telefono\": \"3424000123\",\n  \"rol\": \"medico\",\n  \"id_sede\": \"{{id_sede}}\"\n}",
@@ -2054,7 +2084,7 @@
                 "{{id_usuario_creado}}"
               ]
             },
-            "description": "**`PUT /usuarios/{{id_usuario_creado}}`**\n\nModifica el usuario. **`password` es opcional**: si no se envia, se conserva la que ya tenia (`COALESCE(?, password)`). El resto de los campos son obligatorios.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del usuario |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `apellido` | string | si |  |\n| `dni` | string | si |  |\n| `email` | string | si |  |\n| `fecha_nacimiento` | date | si |  |\n| `rol` | string | si |  |\n| `password` | string | no | solo si se quiere cambiar |\n| `telefono` | string | no |  |\n| `id_sede` | int | no | obligatorio si el rol es `medico` u `operador` |\n| `id_cobertura` | int | no | obligatorio si el rol es `paciente` |\n\n**Respuestas**\n\n- `200` — usuario actualizado\n- `400` — faltan datos, rol invalido, o falta el vinculo del rol\n- `404` — el usuario indicado no existe\n- `409` — ya existe otro usuario con ese DNI o email\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `MODIFICACION` sobre `usuario`.",
+            "description": "**`PUT /usuarios/{{id_usuario_creado}}`**\n\nModifica el usuario. **`password` es opcional**: si no se envia, se conserva la que ya tenia (`COALESCE(?, password)`). El resto de los campos son obligatorios.\n\n**Rol requerido:** `administrador`\n\n**Parametros**\n\n| parametro | ubicacion | detalle |\n|---|---|---|\n| `id` | path | id del usuario |\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `nombre` | string | si |  |\n| `apellido` | string | si |  |\n| `dni` | string | si |  |\n| `email` | string | si |  |\n| `fecha_nacimiento` | date | si |  |\n| `rol` | string | si |  |\n| `password` | string | no | solo si se quiere cambiar |\n| `telefono` | string | no |  |\n| `id_sede` | int | no | obligatorio si el rol es `medico` u `operador` |\n| `id_cobertura` | int | no | obligatorio si el rol es `paciente` |\n\n**Respuestas**\n\n- `200` — usuario actualizado\n- `400` — faltan datos, rol invalido, o falta el vinculo del rol\n- `404` — el usuario indicado no existe\n- `409` — ya existe otro usuario con ese DNI o email\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Auditoria:** registra `MODIFICACION` sobre `usuario`.\n\n**Cambios para el frontend:** para los médicos se puede enviar `especialidades` (array de ids) y reemplaza las que tenía. No se puede quitar una especialidad con la que el médico tiene agenda desde hoy en adelante (409).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nombre\": \"Nuevo\",\n  \"apellido\": \"Medico Editado\",\n  \"dni\": \"50000001\",\n  \"email\": \"nuevo.medico@clinica.com\",\n  \"fecha_nacimiento\": \"1990-01-01\",\n  \"telefono\": \"3424000123\",\n  \"rol\": \"medico\",\n  \"id_sede\": 2\n}",
@@ -2226,7 +2256,7 @@
                 }
               ]
             },
-            "description": "**`GET /auditoria`**\n\nUltimos 100 registros, ordenados del mas nuevo al mas viejo.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total, limite, offset, items }`. Cada item trae `id`, `id_usuario`, `usuario_nombre`, `usuario_rol`, `accion`, `entidad`, `id_entidad`, `detalle` y `fecha`\n- `400` — formato de fecha invalido, `desde` posterior a `hasta`, o `accion` fuera de la lista\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor"
+            "description": "**`GET /auditoria`**\n\nUltimos 100 registros, ordenados del mas nuevo al mas viejo.\n\n**Rol requerido:** `administrador`\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — `datos = { filtros, total, limite, offset, items }`. Cada item trae `id`, `id_usuario`, `usuario_nombre`, `usuario_rol`, `accion`, `entidad`, `id_entidad`, `detalle` y `fecha`\n- `400` — formato de fecha invalido, `desde` posterior a `hasta`, o `accion` fuera de la lista\n- `401` — sin token, o token invalido / vencido\n- `403` — el rol del token no tiene permiso sobre este recurso\n- `500` — error interno del servidor\n\n**Cambios para el frontend:** nuevo filtro `usuario`: búsqueda por nombre y apellido de quien hizo la acción."
           }
         },
         {
@@ -3000,6 +3030,912 @@
           }
         }
       ]
+    },
+    {
+      "name": "Entrega frontend - Cambios del backend",
+      "description": "Endpoints nuevos y validaciones que se agregaron para el frontend de las semanas 2 a 4.\n\n**Antes de correr esta carpeta** corré las carpetas anteriores (al menos los logins de la semana 1 y 2 y la carpeta de agenda), porque usa `{{token_admin}}`, `{{token_medico}}`, `{{token_operador}}`, `{{token_paciente}}` y la agenda creada en `{{fecha_agenda}}`.\n\nTodas las respuestas mantienen la estructura `{ codigo, estado, datos }`.",
+      "item": [
+        {
+          "name": "Listar sedes con token de paciente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sedes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sedes"
+              ]
+            },
+            "description": "**`GET /sedes`**\n\nEl listado de sedes ya no es exclusivo del administrador: lo usa el paciente al pedir un turno.\n\n**Rol requerido:** cualquiera autenticado\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, nombre, direccion, telefono }`\n- `401` — sin token, o token invalido / vencido"
+          }
+        },
+        {
+          "name": "Listar especialidades con token de paciente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/especialidades",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "especialidades"
+              ]
+            },
+            "description": "**`GET /especialidades`**\n\n**Rol requerido:** cualquiera autenticado\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, descripcion }`\n- `401` — sin token, o token invalido / vencido"
+          }
+        },
+        {
+          "name": "Listar medicos por especialidad y sede",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/medicos?id_especialidad={{id_especialidad}}&id_sede={{id_sede}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "medicos"
+              ],
+              "query": [
+                {
+                  "key": "id_especialidad",
+                  "value": "{{id_especialidad}}"
+                },
+                {
+                  "key": "id_sede",
+                  "value": "{{id_sede}}"
+                }
+              ]
+            },
+            "description": "**`GET /medicos`** (nuevo)\n\nMédicos con sus especialidades, sin otros datos personales. Un médico \"es de una sede\" si es su sede principal o si tiene agenda en ella.\n\n**Rol requerido:** cualquiera autenticado\n\n**Parametros (query, todos opcionales)**\n\n| parametro | detalle |\n|---|---|\n| `id_especialidad` | solo los médicos con esa especialidad |\n| `id_sede` | solo los médicos de esa sede |\n| `con_agenda` | `1`: solo los que tienen agenda desde hoy (para esa sede y especialidad, si vienen) |\n\n**Body:** no lleva.\n\n**Respuestas**\n\n- `200` — array de `{ id, nombre, apellido, especialidades: [{ id, descripcion }] }`\n- `401` — sin token, o token invalido / vencido"
+          }
+        },
+        {
+          "name": "Listar medicos con agenda para pedir turno",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/medicos?id_especialidad=2&id_sede=2&con_agenda=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "medicos"
+              ],
+              "query": [
+                {
+                  "key": "id_especialidad",
+                  "value": "2"
+                },
+                {
+                  "key": "id_sede",
+                  "value": "2"
+                },
+                {
+                  "key": "con_agenda",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "**`GET /medicos?con_agenda=1`**\n\nLo usa el paso \"Médico\" de la solicitud de turno: solo ofrece médicos de la especialidad y sede elegidas que tengan agenda desde hoy. Con la base de prueba devuelve a Ana Lopez y Diego Ramirez (Clínica Médica en Sede Norte).\n\n**Rol requerido:** cualquiera autenticado\n\n**Respuestas**\n\n- `200` — array de médicos\n- `401` — sin token, o token invalido / vencido"
+          }
+        },
+        {
+          "name": "Obtener medico con sus especialidades",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/medicos/2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "medicos",
+                "2"
+              ]
+            },
+            "description": "**`GET /medicos/:id`** (nuevo)\n\nLo usa el médico para elegir entre sus propias especialidades al cargar agenda.\n\n**Rol requerido:** cualquiera autenticado\n\n**Respuestas**\n\n- `200` — `{ id, nombre, apellido, especialidades }`\n- `404` — el médico indicado no existe\n- `401` — sin token, o token invalido / vencido"
+          }
+        },
+        {
+          "name": "Fechas disponibles de un medico",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/disponibilidad/fechas?id_medico=2&id_especialidad=5&id_sede=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "disponibilidad",
+                "fechas"
+              ],
+              "query": [
+                {
+                  "key": "id_medico",
+                  "value": "2"
+                },
+                {
+                  "key": "id_especialidad",
+                  "value": "5"
+                },
+                {
+                  "key": "id_sede",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "**`GET /disponibilidad/fechas`** (nuevo)\n\nFechas (desde hoy) en las que el médico tiene agenda para esa especialidad y sede **y le queda al menos un horario libre**. Guarda la primera en `{{fecha_disponible}}`.\n\nNo expone datos de otros pacientes: solo fechas.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Parametros (query, obligatorios):** `id_medico`, `id_especialidad`, `id_sede`\n\n**Respuestas**\n\n- `200` — array de fechas `YYYY-MM-DD`\n- `400` — faltan parametros\n- `403` — el rol no es paciente ni operador"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.length > 0) {",
+                  "    pm.collectionVariables.set('fecha_disponible', respuesta.datos[0]);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Horarios disponibles de un dia",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/disponibilidad/horarios?id_medico=2&id_especialidad=5&id_sede=1&fecha={{fecha_disponible}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "disponibilidad",
+                "horarios"
+              ],
+              "query": [
+                {
+                  "key": "id_medico",
+                  "value": "2"
+                },
+                {
+                  "key": "id_especialidad",
+                  "value": "5"
+                },
+                {
+                  "key": "id_sede",
+                  "value": "1"
+                },
+                {
+                  "key": "fecha",
+                  "value": "{{fecha_disponible}}"
+                }
+              ]
+            },
+            "description": "**`GET /disponibilidad/horarios`** (nuevo)\n\nHorarios libres de un día: los rangos de agenda del médico para esa especialidad y sede, partidos en turnos de **30 minutos**, menos los turnos confirmados del médico ese día (en cualquier sede) y, si es hoy, menos los horarios que ya pasaron. Guarda el primero en `{{hora_disponible}}`.\n\n**Rol requerido:** `paciente` u `operador`\n\n**Parametros (query, obligatorios):** `id_medico`, `id_especialidad`, `id_sede`, `fecha` (`YYYY-MM-DD`)\n\n**Respuestas**\n\n- `200` — array de horas `HH:MM`\n- `400` — faltan parametros o la fecha es invalida\n- `403` — el rol no es paciente ni operador"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.length > 0) {",
+                  "    pm.collectionVariables.set('hora_disponible', respuesta.datos[0]);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Disponibilidad con rol no permitido (debe dar 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/disponibilidad/fechas?id_medico=2&id_especialidad=5&id_sede=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "disponibilidad",
+                "fechas"
+              ],
+              "query": [
+                {
+                  "key": "id_medico",
+                  "value": "2"
+                },
+                {
+                  "key": "id_especialidad",
+                  "value": "5"
+                },
+                {
+                  "key": "id_sede",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "**`GET /disponibilidad/fechas`**\n\nCaso negativo con el token del médico.\n\n**Respuestas**\n\n- `403` — no tenes permisos para acceder a este recurso"
+          }
+        },
+        {
+          "name": "Crear turno en un horario disponible",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos"
+              ]
+            },
+            "description": "**`POST /turnos`**\n\nUsa la fecha y la hora que devolvieron los pedidos de disponibilidad. Guarda el id en `{{turno_nuevo}}` y notifica al paciente y al médico.\n\n**Rol requerido:** `paciente` u `operador` (el operador envía además `id_paciente` y solo en su sede)\n\n**Respuestas**\n\n- `201` — turno confirmado\n- `400` — datos invalidos o el horario ya paso\n- `409` — el horario no esta en la grilla de la agenda o ya esta ocupado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_especialidad\": 5,\n  \"id_sede\": 1,\n  \"id_medico\": 2,\n  \"fecha\": \"{{fecha_disponible}}\",\n  \"hora\": \"{{hora_disponible}}\",\n  \"nota\": \"Turno pedido desde la disponibilidad\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('turno_nuevo', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear turno en un horario ocupado (debe dar 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos"
+              ]
+            },
+            "description": "**`POST /turnos`**\n\nCaso negativo: el horario ya lo tomó el pedido anterior. Es lo que ve el paciente si el horario se ocupó mientras completaba el formulario.\n\n**Respuestas**\n\n- `409` — el horario solicitado ya tiene un turno confirmado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_especialidad\": 5,\n  \"id_sede\": 1,\n  \"id_medico\": 2,\n  \"fecha\": \"{{fecha_disponible}}\",\n  \"hora\": \"{{hora_disponible}}\",\n  \"nota\": \"Mismo horario que el anterior\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Atender turno cargando el historial clinico",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos/{{turno_nuevo}}/atender",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos",
+                "{{turno_nuevo}}",
+                "atender"
+              ]
+            },
+            "description": "**`PATCH /turnos/:id/atender`**\n\nMarca el turno como atendido y registra el historial clínico en la misma transacción.\n\n**Rol requerido:** `medico` (sus propios turnos, en cualquier sede)\n\n**Body (JSON, opcional)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `diagnostico` | string | si, si se envia historial | hasta 255 caracteres |\n| `tratamiento` | string | si, si se envia historial | hasta 255 caracteres |\n| `observaciones` | string | si, si se envia historial | hasta 255 caracteres |\n\n**Respuestas**\n\n- `200` — turno atendido\n- `400` — vino parte del historial pero faltan campos\n- `403` — el turno es de otro medico\n- `409` — el turno no esta confirmado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnostico\": \"Control sin hallazgos\",\n  \"tratamiento\": \"Reposo relativo\",\n  \"observaciones\": \"Volver en 30 dias\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Medico cancela un turno en otra de sus sedes",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/turnos/24/cancelar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "turnos",
+                "24",
+                "cancelar"
+              ]
+            },
+            "description": "**`PATCH /turnos/24/cancelar`**\n\nEl turno semilla 24 es de Ana Lopez en **Sede Norte**, aunque su sede principal es Sede Centro: el médico opera sobre sus propios turnos en cualquier sede donde atiende.\n\n**Respuestas**\n\n- `200` — turno cancelado\n- `409` — el turno ya no esta confirmado (si la carpeta se corrio antes)"
+          }
+        },
+        {
+          "name": "Agenda superpuesta con otra del medico (debe dar 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda"
+              ]
+            },
+            "description": "**`POST /agenda`**\n\nCaso negativo: se superpone con la franja de 08:00 a 13:00 creada en la carpeta de agenda (otra sede, mismo médico y día).\n\n**Respuestas**\n\n- `409` — el horario se superpone con otro rango del medico ese dia",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hora_entrada\": \"11:00\",\n  \"hora_salida\": \"15:00\",\n  \"fecha\": \"{{fecha_agenda}}\",\n  \"id_especialidad\": 2,\n  \"id_sede\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Salida anterior a la entrada (debe dar 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda"
+              ]
+            },
+            "description": "**`POST /agenda`**\n\nCaso negativo de la validación de horas.\n\n**Respuestas**\n\n- `400` — la hora de salida debe ser posterior a la hora de entrada",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hora_entrada\": \"18:00\",\n  \"hora_salida\": \"14:00\",\n  \"fecha\": \"{{fecha_agenda_descartable}}\",\n  \"id_especialidad\": 5,\n  \"id_sede\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Operador carga agenda en otra sede (debe dar 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda"
+              ]
+            },
+            "description": "**`POST /agenda`**\n\nEl operador semilla (Juan Perez) es de Sede Centro: no puede cargar, modificar ni eliminar agenda de otra sede. Consultar la agenda de otras sedes sí está permitido.\n\n**Respuestas**\n\n- `403` — un operador solo puede cargar agenda en su propia sede",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hora_entrada\": \"08:00\",\n  \"hora_salida\": \"12:00\",\n  \"fecha\": \"{{fecha_agenda_descartable}}\",\n  \"id_medico\": 4,\n  \"id_especialidad\": 1,\n  \"id_sede\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Eliminar rango con turnos confirmados (debe dar 409)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda/3",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda",
+                "3"
+              ]
+            },
+            "description": "**`DELETE /agenda/3`**\n\nLa agenda semilla 3 (Ana Lopez, mañana, Sede Centro) tiene un turno confirmado a las 08:30.\n\n**Respuestas**\n\n- `409` — no se puede eliminar el rango horario: tiene 1 turno confirmado"
+          }
+        },
+        {
+          "name": "Modificar rango dejando un turno afuera (debe dar 409)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_medico}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agenda/3",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "agenda",
+                "3"
+              ]
+            },
+            "description": "**`PUT /agenda/3`**\n\nAchicar el rango a 09:00-12:00 dejaría afuera el turno confirmado de las 08:30.\n\n**Respuestas**\n\n- `409` — los turnos confirmados de las 08:30 quedarian fuera del nuevo horario",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hora_entrada\": \"09:00\",\n  \"hora_salida\": \"12:00\",\n  \"fecha\": \"{{fecha_agenda_hoy_mas_1}}\",\n  \"id_especialidad\": 5,\n  \"id_sede\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Buscar pacientes por DNI o apellido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/pacientes?busqueda=Fri",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "pacientes"
+              ],
+              "query": [
+                {
+                  "key": "busqueda",
+                  "value": "Fri"
+                }
+              ]
+            },
+            "description": "**`GET /pacientes`** (nuevo)\n\nBúsqueda por DNI (empieza con) o apellido (contiene), hasta 20 resultados.\n\n**Rol requerido:** `operador`, `medico` o `administrador`\n\n**Parametros (query):** `busqueda` (al menos 2 caracteres)\n\n**Respuestas**\n\n- `200` — array de `{ id, nombre, apellido, dni, email, telefono, fecha_nacimiento, id_cobertura, cobertura_nombre }`\n- `400` — la busqueda tiene menos de 2 caracteres\n- `403` — el rol no tiene permiso"
+          }
+        },
+        {
+          "name": "Alta de paciente por el operador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/pacientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "pacientes"
+              ]
+            },
+            "description": "**`POST /pacientes`** (nuevo)\n\nMismos datos y validaciones que `POST /auth/registro`, pero con token de operador: la auditoría registra el `ALTA` a nombre del operador.\n\n**Rol requerido:** `operador`\n\n**Respuestas**\n\n- `201` — paciente creado\n- `400` — faltan datos o la cobertura no existe\n- `409` — ya existe un usuario con ese DNI o email",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Paciente\",\n  \"apellido\": \"Mostrador\",\n  \"dni\": \"47000001\",\n  \"email\": \"paciente.mostrador@mail.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"2000-05-05\",\n  \"telefono\": \"3424123456\",\n  \"id_cobertura\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Actualizar mis datos (paciente)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_paciente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/pacientes/mis-datos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "pacientes",
+                "mis-datos"
+              ]
+            },
+            "description": "**`PUT /pacientes/mis-datos`** (nuevo)\n\nEl paciente solo puede modificar su email, contraseña, teléfono y cobertura.\n\n**Rol requerido:** `paciente`\n\n**Body (JSON)**\n\n| campo | tipo | obligatorio | detalle |\n|---|---|---|---|\n| `email` | string | si | unico |\n| `id_cobertura` | int | si | debe existir |\n| `telefono` | string | no | hasta 20 caracteres |\n| `password` | string | no | minimo 6 caracteres; se guarda hasheada |\n\n**Respuestas**\n\n- `200` — datos actualizados\n- `400` — datos invalidos\n- `409` — el email ya lo usa otro usuario\n\n**Auditoria:** registra `MODIFICACION` sobre `usuario` (sin la password).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test.postman@example.com\",\n  \"telefono\": \"3424999000\",\n  \"id_cobertura\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Listar usuarios paginado y filtrado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios?rol=medico&apellido=o&limite=5&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "rol",
+                  "value": "medico"
+                },
+                {
+                  "key": "apellido",
+                  "value": "o"
+                },
+                {
+                  "key": "limite",
+                  "value": "5"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "**`GET /usuarios`**\n\n**Rol requerido:** `administrador`\n\n**Parametros (query, todos opcionales):** `nombre`, `apellido` (búsqueda parcial), `rol`, `id_sede`, `dni`, `limite` (por defecto 10), `offset`\n\n**Respuestas**\n\n- `200` — `{ total, limite, offset, items }`\n- `400` — rol invalido"
+          }
+        },
+        {
+          "name": "Crear medico con especialidades",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios"
+              ]
+            },
+            "description": "**`POST /usuarios`**\n\nAlta de médico con su sede y sus especialidades (`medico_especialidad`) en una sola transacción. Guarda el id en `{{id_medico_creado}}`.\n\n**Respuestas**\n\n- `201` — usuario creado, con `especialidades`\n- `400` — falta la sede, especialidades vacias o inexistentes\n- `409` — DNI o email repetidos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Laura\",\n  \"apellido\": \"Paz\",\n  \"dni\": \"30111222\",\n  \"email\": \"lpaz@clinica.com\",\n  \"password\": \"Password123!\",\n  \"fecha_nacimiento\": \"1982-02-02\",\n  \"telefono\": \"3424000777\",\n  \"rol\": \"medico\",\n  \"id_sede\": 3,\n  \"especialidades\": [\n    1,\n    3\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const respuesta = pm.response.json();",
+                  "if (respuesta && respuesta.datos && respuesta.datos.id) {",
+                  "    pm.collectionVariables.set('id_medico_creado', respuesta.datos.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar las especialidades del medico",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/{{id_medico_creado}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{id_medico_creado}}"
+              ]
+            },
+            "description": "**`PUT /usuarios/:id`**\n\nReemplaza las especialidades del médico.\n\n**Respuestas**\n\n- `200` — usuario actualizado\n- `409` — se quiere quitar una especialidad con agenda cargada",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Laura\",\n  \"apellido\": \"Paz\",\n  \"dni\": \"30111222\",\n  \"email\": \"lpaz@clinica.com\",\n  \"fecha_nacimiento\": \"1982-02-02\",\n  \"telefono\": \"3424000777\",\n  \"rol\": \"medico\",\n  \"id_sede\": 3,\n  \"especialidades\": [\n    3\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Quitar una especialidad con agenda (debe dar 409)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/usuarios/2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "usuarios",
+                "2"
+              ]
+            },
+            "description": "**`PUT /usuarios/2`**\n\nAna Lopez tiene agenda futura de Traumatología: no se le puede quitar esa especialidad.\n\n**Respuestas**\n\n- `409` — no se puede quitar Traumatologia: el medico tiene agenda cargada con esa especialidad",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Lopez\",\n  \"dni\": \"10000002\",\n  \"email\": \"alopez@clinica.com\",\n  \"fecha_nacimiento\": \"1980-05-10\",\n  \"telefono\": \"3424111222\",\n  \"rol\": \"medico\",\n  \"id_sede\": 1,\n  \"especialidades\": [\n    2\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Auditoria filtrada por usuario",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auditoria?usuario=Gomez&limite=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auditoria"
+              ],
+              "query": [
+                {
+                  "key": "usuario",
+                  "value": "Gomez"
+                },
+                {
+                  "key": "limite",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "**`GET /auditoria?usuario=`**\n\nFiltro nuevo por nombre y apellido de quien hizo la acción. Muestra las altas y modificaciones de usuarios hechas en esta carpeta.\n\n**Respuestas**\n\n- `200` — `{ filtros, total, limite, offset, items }`"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Fechas relativas al dia en que se corre la coleccion (formato YYYY-MM-DD).",
+          "const dia = (dias) => {",
+          "    const d = new Date();",
+          "    d.setDate(d.getDate() + dias);",
+          "    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;",
+          "};",
+          "pm.collectionVariables.set('fecha_agenda', dia(60));",
+          "pm.collectionVariables.set('fecha_agenda_descartable', dia(61));",
+          "pm.collectionVariables.set('desde', dia(-120));",
+          "pm.collectionVariables.set('hasta', dia(30));",
+          "pm.collectionVariables.set('fecha_agenda_hoy_mas_1', dia(1));"
+        ]
+      }
     }
   ]
 }

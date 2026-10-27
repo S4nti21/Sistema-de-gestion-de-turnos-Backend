@@ -1,5 +1,14 @@
 const pool = require("../config/db");
 const { enviarRespuesta } = require("../utils/respuesta");
+const { esFechaValida, esHoraValida, hoyIso, horaActual, formatearFecha } = require("../utils/fechas");
+const { generarHorarios } = require("../utils/agenda");
+const {
+  traeDatosHistorial,
+  validarDatosHistorial,
+  insertarHistorial,
+} = require("../utils/historial");
+
+const LARGO_MAXIMO_NOTA = 40;
 
 const SELECT_TURNO_DETALLE = `
   SELECT
@@ -14,14 +23,18 @@ const SELECT_TURNO_DETALLE = `
     t.id_cobertura,
     t.estado,
     CONCAT(p.nombre, ' ', p.apellido) AS paciente_nombre,
+    p.dni AS paciente_dni,
+    p.fecha_nacimiento AS paciente_fecha_nacimiento,
     CONCAT(m.nombre, ' ', m.apellido) AS medico_nombre,
     e.descripcion AS especialidad_descripcion,
-    s.nombre AS sede_nombre
+    s.nombre AS sede_nombre,
+    c.nombre AS cobertura_nombre
   FROM turno t
   LEFT JOIN usuario p ON p.id = t.id_paciente
   LEFT JOIN usuario m ON m.id = t.id_medico
   LEFT JOIN especialidad e ON e.id = t.id_especialidad
   LEFT JOIN sede s ON s.id = t.id_sede
+  LEFT JOIN cobertura c ON c.id = t.id_cobertura
 `;
 
 async function crearNotificacion(connection, idUsuario, tipo, mensaje) {
@@ -42,12 +55,35 @@ function validarAutorizacionTurno(turno, usuario) {
     return "Solo podes operar sobre tus propios turnos";
   }
 
-  if ((usuario.rol === "operador" || usuario.rol === "medico") && turno.id_sede !== usuario.id_sede) {
+  if (usuario.rol === "operador" && turno.id_sede !== usuario.id_sede) {
     return "Solo podes operar sobre turnos de tu propia sede";
   }
 
+  // Un medico puede atender en mas de una sede: lo que importa es que el turno sea suyo.
   if (usuario.rol === "medico" && turno.id_medico !== usuario.id) {
     return "Solo podes operar sobre tus propios turnos";
+  }
+
+  return null;
+}
+
+// Validaciones de formato que no necesitan ir a la base. Devuelve el mensaje de error o null.
+function validarDatosTurno({ fecha, hora, nota }) {
+  if (!esFechaValida(fecha)) {
+    return "La fecha debe tener el formato YYYY-MM-DD";
+  }
+
+  if (!esHoraValida(hora)) {
+    return "La hora debe tener el formato HH:MM";
+  }
+
+  if (String(nota).length > LARGO_MAXIMO_NOTA) {
+    return `La nota admite hasta ${LARGO_MAXIMO_NOTA} caracteres`;
+  }
+
+  const hoy = hoyIso();
+  if (fecha < hoy || (fecha === hoy && hora <= horaActual())) {
+    return "No se pueden pedir turnos para un horario que ya paso";
   }
 
   return null;
@@ -66,6 +102,11 @@ async function crearTurno(req, res) {
         400,
         "Faltan datos obligatorios: id_especialidad, id_sede, id_medico, fecha, hora, nota"
       );
+    }
+
+    const errorDatos = validarDatosTurno({ fecha, hora, nota });
+    if (errorDatos) {
+      return enviarRespuesta(res, 400, errorDatos);
     }
 
     if (req.usuario.rol === "paciente") {
@@ -117,15 +158,19 @@ async function crearTurno(req, res) {
       return enviarRespuesta(res, 404, "La sede indicada no existe");
     }
 
-    const [agenda] = await connection.query(
+    // FOR UPDATE bloquea los rangos de agenda del dia: si dos pedidos llegan a la vez
+    // por el mismo horario, el segundo espera y despues ve el turno del primero.
+    const [rangos] = await connection.query(
       `SELECT id, hora_entrada, hora_salida
        FROM agenda
        WHERE id_medico = ? AND id_sede = ? AND id_especialidad = ? AND fecha = ?
-         AND hora_entrada <= ? AND hora_salida > ?
-       LIMIT 1`,
-      [id_medico, id_sede, id_especialidad, fecha, hora, hora]
+       FOR UPDATE`,
+      [id_medico, id_sede, id_especialidad, fecha]
     );
-    if (agenda.length === 0) {
+
+    // La hora tiene que ser el inicio de un turno de la grilla de algun rango (cada 30 minutos).
+    const rango = rangos.find((r) => generarHorarios(r.hora_entrada, r.hora_salida).includes(hora));
+    if (!rango) {
       await connection.rollback();
       return enviarRespuesta(res, 409, "El horario solicitado no esta disponible en la agenda del medico");
     }
@@ -144,9 +189,19 @@ async function crearTurno(req, res) {
 
     const [resultado] = await connection.query(
       `INSERT INTO turno
-       (id_paciente, id_medico, id_especialidad, id_sede, fecha, hora, nota, id_cobertura, estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'confirmado')`,
-      [id_paciente, id_medico, id_especialidad, id_sede, fecha, hora, nota, pacientes[0].id_cobertura]
+       (id_paciente, id_medico, id_especialidad, id_sede, id_agenda, fecha, hora, nota, id_cobertura, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmado')`,
+      [
+        id_paciente,
+        id_medico,
+        id_especialidad,
+        id_sede,
+        rango.id,
+        fecha,
+        hora,
+        nota,
+        pacientes[0].id_cobertura,
+      ]
     );
 
     const turno = await obtenerTurnoDetalle(connection, resultado.insertId);
@@ -154,7 +209,13 @@ async function crearTurno(req, res) {
       connection,
       turno.id_paciente,
       "turno_confirmado",
-      `Tu turno fue confirmado para el ${turno.fecha} a las ${turno.hora} con ${turno.medico_nombre || "el medico asignado"}.`
+      `Tu turno fue confirmado para el ${formatearFecha(turno.fecha)} a las ${turno.hora} con ${turno.medico_nombre || "el medico asignado"}.`
+    );
+    await crearNotificacion(
+      connection,
+      turno.id_medico,
+      "turno_confirmado",
+      `Nuevo turno con ${turno.paciente_nombre} el ${formatearFecha(turno.fecha)} a las ${turno.hora} en ${turno.sede_nombre}.`
     );
 
     await connection.commit();
@@ -197,6 +258,7 @@ async function listarTurnosMedico(req, res) {
       return enviarRespuesta(res, 400, "Falta el dato obligatorio: fecha");
     }
 
+    // Todas las sedes en las que atiende: el filtro por sede se hace en el front.
     const [turnos] = await pool.query(
       `${SELECT_TURNO_DETALLE}
        WHERE t.id_medico = ? AND t.fecha = ? AND t.estado <> 'cancelado'
@@ -263,11 +325,13 @@ async function cancelarTurno(req, res) {
 
     await connection.query("UPDATE turno SET estado = 'cancelado' WHERE id = ?", [id]);
 
+    const fecha = formatearFecha(turno.fecha);
+
     await crearNotificacion(
       connection,
       turno.id_paciente,
       "turno_cancelado",
-      `Tu turno del ${turno.fecha} a las ${turno.hora} fue cancelado.`
+      `Tu turno del ${fecha} a las ${turno.hora} fue cancelado.`
     );
 
     if (turno.id_medico && turno.id_medico !== turno.id_paciente) {
@@ -275,7 +339,7 @@ async function cancelarTurno(req, res) {
         connection,
         turno.id_medico,
         "turno_cancelado",
-        `El turno del ${turno.fecha} a las ${turno.hora} fue cancelado.`
+        `El turno de ${turno.paciente_nombre} del ${fecha} a las ${turno.hora} fue cancelado.`
       );
     }
 
@@ -291,11 +355,21 @@ async function cancelarTurno(req, res) {
   }
 }
 
+// Marca el turno como atendido. Si el body trae diagnostico, tratamiento y
+// observaciones, el historial clinico se registra en la misma transaccion.
 async function atenderTurno(req, res) {
   const connection = await pool.getConnection();
 
   try {
     const { id } = req.params;
+
+    const cargaHistorial = traeDatosHistorial(req.body);
+    if (cargaHistorial) {
+      const errorHistorial = validarDatosHistorial(req.body);
+      if (errorHistorial) {
+        return enviarRespuesta(res, 400, errorHistorial);
+      }
+    }
 
     await connection.beginTransaction();
 
@@ -310,11 +384,6 @@ async function atenderTurno(req, res) {
       return enviarRespuesta(res, 403, "Solo podes atender tus propios turnos");
     }
 
-    if (turno.id_sede !== req.usuario.id_sede) {
-      await connection.rollback();
-      return enviarRespuesta(res, 403, "Solo podes atender turnos de tu propia sede");
-    }
-
     if (turno.estado !== "confirmado") {
       await connection.rollback();
       return enviarRespuesta(res, 409, "Solo se pueden atender turnos confirmados");
@@ -322,11 +391,15 @@ async function atenderTurno(req, res) {
 
     await connection.query("UPDATE turno SET estado = 'atendido' WHERE id = ?", [id]);
 
+    if (cargaHistorial) {
+      await insertarHistorial(connection, turno, req.body);
+    }
+
     await crearNotificacion(
       connection,
       turno.id_paciente,
       "turno_atendido",
-      `Tu turno del ${turno.fecha} a las ${turno.hora} fue marcado como atendido.`
+      `Tu turno del ${formatearFecha(turno.fecha)} a las ${turno.hora} fue marcado como atendido.`
     );
 
     const actualizado = await obtenerTurnoDetalle(connection, id);

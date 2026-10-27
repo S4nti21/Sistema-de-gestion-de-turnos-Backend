@@ -15,6 +15,9 @@ const historialRoutes = require("./routes/historial.routes");
 const notificacionRoutes = require("./routes/notificacion.routes");
 const auditoriaRoutes = require("./routes/auditoria.routes");
 const reporteRoutes = require("./routes/reporte.routes");
+const medicoRoutes = require("./routes/medico.routes");
+const disponibilidadRoutes = require("./routes/disponibilidad.routes");
+const pacienteRoutes = require("./routes/paciente.routes");
 
 const app = express();
 
@@ -38,6 +41,10 @@ app.use("/historial-clinico", historialRoutes);
 app.use("/notificaciones", notificacionRoutes);
 app.use("/auditoria", auditoriaRoutes);
 app.use("/reportes", reporteRoutes);
+app.use("/medicos", medicoRoutes);
+app.use("/disponibilidad", disponibilidadRoutes);
+// Las altas y modificaciones de pacientes se auditan desde sus propias rutas.
+app.use("/pacientes", pacienteRoutes);
 
 app.use((req, res) => {
   return enviarRespuesta(res, 404, `Ruta no encontrada: ${req.method} ${req.originalUrl}`);
